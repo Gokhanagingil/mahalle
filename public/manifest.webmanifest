@@ -1,0 +1,15 @@
+{
+  "name": "Mahalle Ustası",
+  "short_name": "Mahalle",
+  "description": "Sakin ve yaratıcı bir mahalle planlama oyunu.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F4EA",
+  "theme_color": "#16766D",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
