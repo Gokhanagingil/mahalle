@@ -41,25 +41,39 @@ jobs:
       - uses: actions/cache@v4
         id: debug-signing-cache
         with:
-          path: ~/.android/debug.keystore
-          key: mahalle-debug-keystore-v1
+          # Use the absolute path Gradle reads. A literal `~` cache path was
+          # restored elsewhere, so Gradle silently generated a new key on
+          # every runner and made successive APKs impossible to update.
+          path: /home/runner/.android/debug.keystore
+          key: mahalle-debug-keystore-v2
       - name: Prepare stable debug signing key
-        if: steps.debug-signing-cache.outputs.cache-hit != 'true'
         run: |
           mkdir -p "$HOME/.android"
-          keytool -genkeypair -noprompt \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -dname "CN=Mahalle Ustasi Debug,O=Development,C=TR" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -noprompt \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Mahalle Ustasi Debug,O=Development,C=TR" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000
+          fi
       - run: npm ci
       - run: npm run android:sync
       - run: chmod +x android/gradlew
       - run: cd android && ./gradlew assembleDebug
+      - name: Verify stable APK signing identity
+        run: |
+          apk_fingerprint="$(keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | sed -n 's/^[[:space:]]*SHA256: //p')"
+          key_fingerprint="$(keytool -list -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p')"
+          test -n "$apk_fingerprint"
+          test "$apk_fingerprint" = "$key_fingerprint"
+          echo "Verified APK certificate SHA256: $apk_fingerprint"
       - uses: actions/upload-artifact@v4
         with:
           name: mahalle-ustasi-debug-apk
