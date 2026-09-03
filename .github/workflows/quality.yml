@@ -66,11 +66,16 @@ jobs:
       - run: cd android && ./gradlew assembleDebug
       - name: Verify stable APK signing identity
         run: |
-          apk_fingerprint="$(keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | sed -n 's/^[[:space:]]*SHA256: //p')"
-          key_fingerprint="$(keytool -list -v \
+          apksigner_path="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" \
+            -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
+          test -n "$apksigner_path"
+          apk_fingerprint="$("$apksigner_path" verify --print-certs \
+            android/app/build/outputs/apk/debug/app-debug.apk | \
+            sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+          key_fingerprint="$(keytool -exportcert \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
-            -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p')"
+            -alias androiddebugkey | sha256sum | cut -d ' ' -f 1)"
           test -n "$apk_fingerprint"
           test "$apk_fingerprint" = "$key_fingerprint"
           echo "Verified APK certificate SHA256: $apk_fingerprint"
