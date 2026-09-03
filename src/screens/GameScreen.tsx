@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft, Check, HelpCircle, Lightbulb, Move, Pause, Play, RotateCcw, Route, Sparkles, Undo2, X } from 'lucide-react'
 import { BuildingArt } from '../components/BuildingArt'
 import {
@@ -32,7 +32,8 @@ type Props = {
   onHome: () => void
 }
 
-type Notice = 'short' | 'obstacle' | 'budget' | 'placement' | 'junction' | null
+type Notice = 'short' | 'obstacle' | 'budget' | 'placement' | 'junction' | 'roadStart' | 'roadFinish' | 'drag' | 'placementGoal' | null
+type RoadTutorialPhase = 'watch' | 'try'
 type DragState = { id: string; origin: Point; point: Point; before: MissionState; moved: boolean }
 
 function hintFor(locale: Locale, levelId: number) {
@@ -101,6 +102,7 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
   const [goalsOpen, setGoalsOpen] = useState(false)
   const [showIntro, setShowIntro] = useState(true)
   const [notice, setNotice] = useState<Notice>(null)
+  const [roadTutorialPhase, setRoadTutorialPhase] = useState<RoadTutorialPhase>(level.id === 1 ? 'watch' : 'try')
   const noticeTimer = useRef<number | undefined>(undefined)
   const initialEvaluation = evaluateMission(level, initialMission)
   const [complete, setComplete] = useState(initialEvaluation.complete)
@@ -115,6 +117,10 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
   const allRoads = useMemo(() => [...(level.baseRoads ?? []), ...mission.roads], [level.baseRoads, mission.roads])
   const junctions = useMemo(() => roadJunctions(allRoads), [allRoads])
   const evaluation = useMemo(() => evaluateMission(level, mission), [level, mission])
+  const roadLessonActive = level.id === 1 && !complete
+  const roadLessonNeedsAction = roadLessonActive && mission.roads.length === 0
+  const placementLessonActive = level.id === 2 && !complete
+  const placementLessonNeedsAction = placementLessonActive && !evaluation.complete
   const previewPoints = useMemo(() => drawing.length > 1 ? magnetizePath(drawing, anchors, allRoads) : drawing, [drawing, anchors, allRoads])
   const previewHitsObstacle = previewPoints.length > 1 && pathHitsObstacle(previewPoints, level)
   const satisfiedCount = evaluation.requirements.filter((result) => result.satisfied).length
@@ -131,6 +137,12 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
   const serviceCentre = level.serviceRadius
     ? mission.positions[level.serviceRadius.itemId] ?? level.placeables.find((item) => item.id === level.serviceRadius!.itemId)!.position
     : null
+
+  useEffect(() => {
+    if (!roadLessonNeedsAction || roadTutorialPhase !== 'watch') return
+    const timer = window.setTimeout(() => setRoadTutorialPhase('try'), settings.reducedMotion ? 900 : 5600)
+    return () => window.clearTimeout(timer)
+  }, [roadLessonNeedsAction, roadTutorialPhase, settings.reducedMotion])
 
   function toMapPoint(clientX: number, clientY: number): Point {
     const rect = mapRef.current!.getBoundingClientRect()
@@ -173,9 +185,10 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
 
   function beginRoad(event: React.PointerEvent<SVGSVGElement>) {
     if (activeTool !== 'road' || paused || complete) return
+    if (roadLessonNeedsAction && roadTutorialPhase === 'watch') setRoadTutorialPhase('try')
     const point = toMapPoint(event.clientX, event.clientY)
     const target = findSnapTarget(point, anchors, allRoads)
-    if (!target) { showNotice('short'); return }
+    if (!target) { showNotice(roadLessonNeedsAction ? 'roadStart' : 'short'); return }
     event.currentTarget.setPointerCapture(event.pointerId)
     drawingRef.current = [point]
     setDrawing([point])
@@ -203,7 +216,7 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
     drawingRef.current = []
     setDrawing([])
     signalSnap(null)
-    if (!endTarget || points.length < 2 || roadLength({ id: 'preview', points }) < 5) { showNotice('short'); return }
+    if (!endTarget || points.length < 2 || roadLength({ id: 'preview', points }) < 5) { showNotice(roadLessonNeedsAction ? 'roadFinish' : 'short'); return }
     if (pathHitsObstacle(points, level)) { showNotice('obstacle'); return }
 
     const road: RoadStroke = { id: `road-${Date.now()}-${mission.roads.length}`, points }
@@ -246,7 +259,11 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
     setSelectedItem(null)
     setShowIntro(false)
     onSave(next)
-    placementFeedback(settings)
+    const beforeSatisfied = evaluateMission(level, before).requirements.filter((result) => result.satisfied).length
+    const nextEvaluation = evaluateMission(level, next)
+    const nextSatisfied = nextEvaluation.requirements.filter((result) => result.satisfied).length
+    if (!nextEvaluation.complete && nextSatisfied > beforeSatisfied) placementFeedback(settings)
+    if (!nextEvaluation.complete && nextSatisfied <= beforeSatisfied) showNotice('placementGoal')
     checkCompletion(next)
   }
 
@@ -305,6 +322,7 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
     completedOnce.current = false
     setPaused(false)
     setShowIntro(true)
+    setRoadTutorialPhase(level.id === 1 ? 'watch' : 'try')
     setSelectedItem(null)
     onSave(fresh)
   }
@@ -312,17 +330,41 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
   const noticeCopy = notice === 'obstacle' ? t(locale, 'obstacleNotice')
     : notice === 'budget' ? t(locale, 'budgetNotice')
       : notice === 'placement' ? t(locale, 'placementNotice')
-        : notice === 'junction' ? t(locale, 'junctionNotice') : t(locale, 'gentleTryAgain')
+        : notice === 'junction' ? t(locale, 'junctionNotice')
+          : notice === 'roadStart' ? t(locale, 'roadStartNotice')
+            : notice === 'roadFinish' ? t(locale, 'roadFinishNotice')
+              : notice === 'drag' ? t(locale, 'dragNotice')
+                : notice === 'placementGoal' ? t(locale, 'placementGoalNotice') : t(locale, 'gentleTryAgain')
 
   return (
-    <main className="game-screen road-game mission-game">
+    <main className={`game-screen road-game mission-game ${roadLessonActive ? 'first-road-lesson' : ''} ${placementLessonActive ? 'first-placement-lesson' : ''}`}>
       <header className="game-header">
         <button className="round-button" onClick={() => setPaused(true)} aria-label={t(locale, 'pause')}><Pause /></button>
         <div className="level-heading"><small>{t(locale, 'level')} {level.id} / {totalLevels}</small><strong>{level.name[locale]}</strong></div>
         <div className="level-progress" aria-hidden="true"><i style={{ width: `${(level.id / totalLevels) * 100}%` }} /></div>
       </header>
 
-      <section className="mission-brief" aria-live="polite">
+      {roadLessonActive ? (
+        <section className={`hands-on-coach road-lesson phase-${roadTutorialPhase}`} aria-live="polite">
+          <span className="lesson-number">1</span>
+          <div>
+            <small>{roadLessonNeedsAction && roadTutorialPhase === 'watch' ? t(locale, 'watchMe') : roadLessonNeedsAction ? t(locale, 'yourTurn') : t(locale, 'wellDone')}</small>
+            <strong>{roadLessonNeedsAction ? t(locale, 'roadLessonInstruction') : t(locale, 'roadLessonSuccess')}</strong>
+          </div>
+          {roadLessonNeedsAction && <button onClick={() => setRoadTutorialPhase(roadTutorialPhase === 'watch' ? 'try' : 'watch')}>
+            {roadTutorialPhase === 'watch' ? <Play /> : <RotateCcw />}
+            <span>{t(locale, roadTutorialPhase === 'watch' ? 'tryNow' : 'replayDemo')}</span>
+          </button>}
+        </section>
+      ) : placementLessonActive ? (
+        <section className="hands-on-coach placement-lesson" aria-live="polite">
+          <span className="lesson-number">2</span>
+          <div>
+            <small>{placementLessonNeedsAction ? t(locale, 'yourTurn') : t(locale, 'wellDone')}</small>
+            <strong>{placementLessonNeedsAction ? t(locale, 'placementLessonInstruction') : t(locale, 'placementLessonSuccess')}</strong>
+          </div>
+        </section>
+      ) : <section className="mission-brief" aria-live="polite">
         <div className="mission-title-row">
           <div className="objective-copy"><span className="objective-icon">{activeTool === 'road' ? <Route /> : <Move />}</span><div><small>{t(locale, 'goals')}</small><strong>{level.objective[locale]}</strong></div></div>
           <button className="connection-meter" onClick={() => setGoalsOpen(true)} aria-label={t(locale, 'allGoals')}><strong>{satisfiedCount}/{evaluation.requirements.length}</strong><span>{t(locale, 'goalsMet')}</span></button>
@@ -332,7 +374,7 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
           <div><small>{t(locale, 'currentGoal')}</small><b>{activeRequirement.text[locale]}</b></div>
           {activeRequirementResult.target !== undefined && <em>{activeRequirementResult.progress}/{activeRequirementResult.target}</em>}
         </div>
-      </section>
+      </section>}
 
       {level.tools.length > 1 && (
         <div className="mission-tool-switch" role="group" aria-label={t(locale, 'chooseTool')}>
@@ -348,12 +390,17 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
             {unplacedItems.map((item, index) => (
               <button
                 key={item.id}
-                className={`${selectedItem === item.id ? 'selected' : ''} ${guidedItemId === item.id ? 'is-next' : ''}`}
+                className={`${selectedItem === item.id ? 'selected' : ''} ${guidedItemId === item.id ? 'is-next' : ''} ${placementLessonNeedsAction ? 'tutorial-drag-source' : ''}`}
                 aria-label={`${item.label[locale]}. ${t(locale, 'dragToMove')}`}
                 onPointerDown={(event) => beginDrag(event, item.id)} onPointerMove={dragItem} onPointerUp={finishDrag} onPointerCancel={finishDrag}
                 onClick={(event) => {
                   if (suppressItemClickRef.current) { suppressItemClickRef.current = false; return }
                   event.stopPropagation()
+                  if (placementLessonNeedsAction) {
+                    setSelectedItem(null)
+                    showNotice('drag')
+                    return
+                  }
                   setSelectedItem(item.id)
                   setActiveTool('move')
                   setShowIntro(false)
@@ -382,9 +429,15 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
             <path className="terrain-patch patch-two" d="M-4 86c18-11 31-7 45 1s31 6 43-3 23-4 25 10v25H-4z" />
             <path className="meadow-line" d="M4 57c17-9 24 3 40 0s28-12 51-3" />
 
-            {level.serviceRadius && serviceCentre && <circle className="service-radius" cx={serviceCentre.x} cy={serviceCentre.y} r={level.serviceRadius.radius} />}
+            {level.serviceRadius && serviceCentre && (!placementLessonActive || mission.positions[level.serviceRadius.itemId]) && <circle className="service-radius" cx={serviceCentre.x} cy={serviceCentre.y} r={level.serviceRadius.radius} />}
 
-            {level.tutorialPath && mission.roads.length === 0 && <path className="tutorial-route" d={smoothPath(level.tutorialPath)} />}
+            {roadLessonNeedsAction && level.tutorialPath && <g className={`road-demonstration phase-${roadTutorialPhase}`} aria-hidden="true">
+              <path className="tutorial-demo-verge" d={smoothPath(level.tutorialPath)} pathLength="1" />
+              <path className="tutorial-demo-road" d={smoothPath(level.tutorialPath)} pathLength="1" />
+              {roadTutorialPhase === 'watch' && (settings.reducedMotion
+                ? <g className="tutorial-finger" transform={`translate(${level.tutorialPath[0].x} ${level.tutorialPath[0].y})`}><circle className="finger-ring" r="6" /><circle className="finger-tip" r="2.7" /></g>
+                : <g className="tutorial-finger"><circle className="finger-ring" r="6" /><circle className="finger-tip" r="2.7" /><animateMotion dur="2.7s" repeatCount="indefinite" path={smoothPath(level.tutorialPath)} /></g>)}
+            </g>}
 
             <g className="road-verges" filter={`url(#road-shadow-${level.id})`}>
               {allRoads.map((road) => <path key={`v-${road.id}`} className={`${road.id === freshRoadId ? 'fresh-road-line ' : ''}road-verge`} d={smoothPath(road.points)} pathLength="1" />)}
@@ -405,8 +458,8 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
             {level.obstacles.map((obstacle) => <ObstacleArt key={obstacle.id} type={obstacle.type} x={obstacle.position.x} y={obstacle.position.y} radius={obstacle.radius} />)}
           </svg>
 
-          {guidedItem?.guide && <div
-            className={`placement-guide ${selectedItem === guidedItem.id ? 'is-ready' : ''}`}
+          {placementLessonNeedsAction && guidedItem?.guide && <div
+            className={`placement-guide placement-drop-target ${selectedItem === guidedItem.id ? 'is-ready' : ''}`}
             style={{
               left: `${guidedItem.guide.position.x}%`,
               top: `${(guidedItem.guide.position.y / 118) * 100}%`,
@@ -414,7 +467,12 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
               aspectRatio: '1',
             }}
             aria-hidden="true"
-          ><span className="guide-ghost"><BuildingArt type={guidedItem.type} decorative /></span><strong>{t(locale, 'placeHere')}</strong></div>}
+          ><span className="guide-ghost"><BuildingArt type={guidedItem.type} decorative /></span><strong>{t(locale, 'dragHere')}</strong></div>}
+
+          {roadLessonNeedsAction && level.tutorialPath && <>
+            <div className="tutorial-endpoint tutorial-start" style={{ left: `${level.tutorialPath[0].x}%`, top: `${(level.tutorialPath[0].y / 118) * 100}%` }} aria-hidden="true"><i /><strong>{t(locale, 'startHere')}</strong></div>
+            <div className="tutorial-endpoint tutorial-finish" style={{ left: `${level.tutorialPath.at(-1)!.x}%`, top: `${(level.tutorialPath.at(-1)!.y / 118) * 100}%` }} aria-hidden="true"><i /><strong>{t(locale, 'finishHere')}</strong></div>
+          </>}
 
           {level.landmarks.map((landmark, index) => {
             const connected = evaluation.connectedAnchorIds.includes(landmark.id)
@@ -437,24 +495,24 @@ export function GameScreen({ level, locale, settings, initialMission, totalLevel
             ><span className="drag-ring" /><BuildingArt type={item.type} decorative /><span className="landmark-label">{item.label[locale]}</span><span className="drag-handle"><Move /></span></button>
           ))}
 
-          {showIntro && activeTool === 'road' && <div className="map-coach" role="status"><span className="coach-avatar"><HelpCircle /></span><p>{level.intro[locale]}</p><button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button></div>}
-          {showIntro && activeTool === 'move' && <div className="placement-coach" role="status"><span><b>1</b>{t(locale, 'chooseItemStep')}</span><i /><span><b>2</b>{t(locale, 'choosePlaceStep')}</span></div>}
+          {showIntro && activeTool === 'road' && !roadLessonActive && <div className="map-coach" role="status"><span className="coach-avatar"><HelpCircle /></span><p>{level.intro[locale]}</p><button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button></div>}
+          {showIntro && activeTool === 'move' && !placementLessonActive && <div className="placement-coach" role="status"><span><b>1</b>{t(locale, 'chooseItemStep')}</span><i /><span><b>2</b>{t(locale, 'choosePlaceStep')}</span></div>}
           {!showIntro && !drawing.length && !notice && <div className={`action-coach coach-${activeTool}`} aria-hidden="true"><span className={activeTool === 'road' ? 'finger-trail' : 'move-pulse'} /> <strong>{activeTool === 'road' ? t(locale, 'drawCoachShort') : selectedItem ? `${positionedItems.find((item) => item.id === selectedItem)?.label[locale]} ${t(locale, 'selectedItem')} — ${t(locale, 'choosePlaceStep')}` : t(locale, 'moveCoachShort')}</strong></div>}
           {snapTarget && drawing.length > 0 && <div className="snap-toast" role="status"><Sparkles /> {t(locale, snapTarget.kind === 'road' ? 'snapToRoad' : 'snapToPlace')}</div>}
           {notice && <div className={`map-notice notice-${notice}`} role="status"><span>{notice === 'obstacle' || notice === 'placement' ? '🌿' : notice === 'junction' ? '✨' : notice === 'budget' ? '✂️' : '↗'}</span>{noticeCopy}</div>}
         </div>
       </section>
 
-      {level.tools.includes('road') && <div className={`road-status-row ${!evaluation.withinBudget ? 'over-budget' : ''}`}>
+      {level.tools.includes('road') && !roadLessonActive && <div className={`road-status-row ${!evaluation.withinBudget ? 'over-budget' : ''}`}>
         <span><Route /> {level.roadBudget ? t(locale, 'roadBudget') : t(locale, 'roadLength')}: <strong>{Math.round(evaluation.totalLength)}{level.roadBudget ? ` / ${level.roadBudget}` : ''} m</strong></span>
         <span className="alive-status"><i /> {t(locale, satisfiedCount ? 'neighbourhoodAlive' : 'planning')}</span>
       </div>}
 
-      <nav className="game-toolbar" aria-label={locale === 'tr' ? 'Oyun işlemleri' : 'Game actions'}>
+      {!roadLessonActive && !placementLessonActive && <nav className="game-toolbar" aria-label={locale === 'tr' ? 'Oyun işlemleri' : 'Game actions'}>
         <button onClick={undo} disabled={!history.length}><Undo2 /><span>{t(locale, 'undo')}</span></button>
         <button className={hintOpen ? 'active' : ''} onClick={() => setHintOpen(true)}><Lightbulb /><span>{t(locale, 'hint')}</span></button>
         <button onClick={() => setPaused(true)}><Pause /><span>{t(locale, 'pause')}</span></button>
-      </nav>
+      </nav>}
 
       {hintOpen && <div className="bottom-sheet-backdrop" onClick={() => setHintOpen(false)}><section className="bottom-sheet" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="hint-title"><div className="sheet-handle" /><span className="sheet-icon"><Lightbulb /></span><h2 id="hint-title">{t(locale, 'hintIntro')}</h2><p>{hintFor(locale, level.id)}</p><button className="primary-button" onClick={() => setHintOpen(false)}>{t(locale, 'resume')}</button></section></div>}
 

@@ -245,6 +245,7 @@ button:focus-visible, input:focus-visible {
 /* Game */
 .game-screen { min-height: 100vh; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 14px calc(94px + var(--safe-bottom)); background: radial-gradient(circle at 80% 0%, #e4f1e7 0, transparent 32%), var(--canvas); }
 .game-screen.mission-game { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+.game-screen.first-road-lesson, .game-screen.first-placement-lesson { padding-bottom: calc(14px + var(--safe-bottom)); }
 .game-header { max-width: 640px; margin: 0 auto 12px; display: grid; grid-template-columns: 54px 1fr; grid-template-rows: auto 6px; gap: 7px 12px; align-items: center; }
 .level-heading { display: flex; flex-direction: column; }
 .level-heading small { color: var(--muted); font-size: .78rem; font-weight: 700; }
@@ -462,6 +463,33 @@ button:focus-visible, input:focus-visible {
 .master-route-badge span { font-size: .78rem; line-height: 1.25; }
 
 /* Multi-tool mission layer */
+.hands-on-coach {
+  width: 100%;
+  max-width: 530px;
+  min-height: 78px;
+  margin: 0 auto 9px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 3px solid var(--primary);
+  border-radius: 22px;
+  color: var(--primary-dark);
+  background: #f2fbf7;
+  box-shadow: 0 8px 22px rgba(22,118,109,.14);
+}
+.lesson-number { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 15px; color: white; background: var(--primary); font-family: 'Nunito', sans-serif; font-size: 1.45rem; font-weight: 900; }
+.hands-on-coach > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.hands-on-coach small { color: #8d4b2e; font-size: .82rem; font-weight: 900; letter-spacing: .045em; }
+.hands-on-coach strong { font-family: 'Nunito', sans-serif; font-size: 1.08rem; line-height: 1.17; }
+.hands-on-coach > button { min-width: 94px; min-height: 52px; padding: 5px 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border: 0; border-radius: 15px; color: white; background: var(--accent); box-shadow: 0 4px 0 #ad4d31; font-size: .82rem; font-weight: 900; cursor: pointer; }
+.hands-on-coach > button:active { transform: translateY(3px); box-shadow: 0 1px 0 #ad4d31; }
+.hands-on-coach > button svg { width: 20px; height: 20px; stroke-width: 3; }
+.hands-on-coach.phase-watch { border-color: var(--accent); background: #fff5ec; }
+.hands-on-coach.phase-watch .lesson-number { background: var(--accent); }
+.placement-lesson { grid-template-columns: 48px minmax(0, 1fr); }
+
 .mission-brief { max-width: 640px; margin: 0 auto 9px; padding: 10px; border: 1px solid rgba(36,60,56,.08); border-radius: 22px; background: rgba(255,253,247,.94); box-shadow: 0 7px 22px rgba(38,68,61,.1); }
 .mission-game .game-header, .mission-game .mission-brief, .mission-game .mission-tool-switch, .mission-game .placement-tray, .mission-game .road-status-row { width: 100%; flex: 0 0 auto; }
 .mission-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -499,6 +527,10 @@ button:focus-visible, input:focus-visible {
 .placement-tray-items > button { position: relative; min-width: 0; height: 52px; padding: 3px 25px 3px 4px; display: grid; grid-template-columns: 43px 1fr; align-items: center; border: 2px solid #d9ded5; border-radius: 13px; color: #314c46; background: white; box-shadow: 0 3px 7px rgba(48,70,58,.08); cursor: grab; touch-action: none; }
 .placement-tray-items > button:active { cursor: grabbing; transform: scale(.97); }
 .placement-tray-items > button.is-next { border-color: #e7af36; box-shadow: 0 0 0 3px rgba(244,201,93,.24), 0 4px 9px rgba(72,56,26,.12); animation: tray-next 1.7s ease-in-out infinite; }
+.first-placement-lesson .placement-tray { position: relative; border-color: #6bb7a4; background: #edf8f3; }
+.first-placement-lesson .placement-tray::after { content: '↓'; position: absolute; z-index: 8; left: 50%; bottom: -31px; width: 38px; height: 38px; display: grid; place-items: center; border: 3px solid white; border-radius: 50%; color: white; background: var(--accent); box-shadow: 0 5px 11px rgba(116,57,36,.25); font-size: 1.55rem; font-weight: 900; line-height: 1; transform: translateX(-50%); animation: drag-arrow 1.2s ease-in-out infinite; pointer-events: none; }
+.placement-tray-items > button.tutorial-drag-source { border-width: 3px; border-color: var(--accent); box-shadow: 0 0 0 5px rgba(233,111,69,.16), 0 6px 12px rgba(72,56,26,.14); animation: drag-source-lift 1.4s ease-in-out infinite; }
+.placement-tray-items > button.tutorial-drag-source b { font-size: .94rem; }
 .placement-tray-items > button.selected { border-color: var(--primary); background: #e9f5ef; box-shadow: 0 0 0 3px rgba(22,118,109,.18); animation: none; }
 .placement-tray-items .building-art { width: 42px; height: 42px; margin: 0; }
 .placement-tray-items b { overflow: hidden; font-size: .74rem; line-height: 1.05; text-align: left; text-overflow: ellipsis; }
@@ -517,6 +549,29 @@ button:focus-visible, input:focus-visible {
 .placement-guide .building-art { width: 100%; height: 100%; }
 .placement-guide strong { position: absolute; left: 50%; bottom: -15px; width: max-content; padding: 4px 8px; border: 2px solid #e1aa37; border-radius: 99px; color: #65460f; background: #fff5bd; box-shadow: 0 3px 8px rgba(80,57,15,.16); font-size: .62rem; letter-spacing: .045em; transform: translateX(-50%); }
 .placement-guide.is-ready { border-color: var(--accent); background: rgba(255,225,125,.66); box-shadow: 0 0 0 9px rgba(255,244,180,.4); }
+.placement-guide.placement-drop-target { z-index: 2; border: 4px dashed var(--primary); color: var(--primary-dark); background: rgba(231,247,239,.76); box-shadow: 0 0 0 9px rgba(255,255,255,.58), 0 0 0 12px rgba(22,118,109,.18); animation: drop-target-breathe 1.45s ease-in-out infinite; }
+.placement-guide.placement-drop-target::before { inset: -12px; border: 3px solid rgba(22,118,109,.42); }
+.placement-guide.placement-drop-target .guide-ghost { opacity: .68; filter: none; }
+.placement-guide.placement-drop-target strong { bottom: -24px; padding: 6px 10px; border: 2px solid var(--primary); color: white; background: var(--primary); box-shadow: 0 4px 9px rgba(13,92,85,.24); font-size: .84rem; }
+.placement-guide.placement-drop-target.is-ready { border-color: var(--accent); background: rgba(255,240,225,.83); box-shadow: 0 0 0 9px rgba(255,255,255,.65), 0 0 0 13px rgba(233,111,69,.2); }
+
+.road-demonstration { pointer-events: none; }
+.tutorial-demo-verge, .tutorial-demo-road { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tutorial-demo-verge { stroke: rgba(255,255,255,.94); stroke-width: 10.5; }
+.tutorial-demo-road { stroke: var(--accent); stroke-width: 5.8; }
+.road-demonstration.phase-watch .tutorial-demo-verge, .road-demonstration.phase-watch .tutorial-demo-road { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tutorial-road-draw 2.7s ease-in-out infinite; }
+.road-demonstration.phase-try .tutorial-demo-verge { stroke-width: 5; stroke-dasharray: .1 3.4; opacity: .88; }
+.road-demonstration.phase-try .tutorial-demo-road { stroke-width: 1.2; stroke-dasharray: .1 3.4; opacity: .75; }
+.tutorial-finger { filter: drop-shadow(0 2px 2px rgba(38,65,56,.3)); }
+.tutorial-finger .finger-ring { fill: rgba(255,255,255,.88); stroke: var(--accent); stroke-width: 1.8; }
+.tutorial-finger .finger-tip { fill: var(--accent); stroke: white; stroke-width: .8; }
+.tutorial-endpoint { position: absolute; z-index: 7; width: 1px; height: 1px; pointer-events: none; }
+.tutorial-endpoint i { position: absolute; left: 0; top: 0; width: 50px; height: 50px; border: 5px solid white; border-radius: 50%; background: rgba(233,111,69,.17); box-shadow: 0 0 0 6px rgba(233,111,69,.78), 0 7px 15px rgba(64,66,45,.22); transform: translate(-50%,-50%); animation: tutorial-point-pulse 1.25s ease-in-out infinite; }
+.tutorial-endpoint strong { position: absolute; left: 50%; width: max-content; max-width: 142px; padding: 6px 9px; border: 2px solid white; border-radius: 11px; color: white; background: #a9442b; box-shadow: 0 4px 10px rgba(55,50,35,.25); font-size: .86rem; line-height: 1.05; letter-spacing: .025em; text-align: center; transform: translateX(-50%); }
+.tutorial-start strong { top: 29px; }
+.tutorial-finish strong { bottom: 29px; }
+.first-road-lesson .landmark-label { opacity: 0; }
+.first-placement-lesson .landmark-label { padding: 4px 8px; font-size: .82rem; }
 
 .map-landmark.placeable { z-index: 5; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: grab; appearance: none; filter: drop-shadow(0 7px 4px rgba(37,65,48,.2)); transition: filter .15s ease; }
 .map-landmark.placeable:active { cursor: grabbing; }
@@ -616,6 +671,11 @@ button:focus-visible, input:focus-visible {
 @keyframes tray-next { 50% { transform: translateY(-2px); box-shadow: 0 0 0 5px rgba(244,201,93,.16), 0 6px 11px rgba(72,56,26,.13); } }
 @keyframes placement-breathe { 50% { transform: translate(-50%,-50%) scale(1.07); box-shadow: 0 0 0 12px rgba(255,245,188,.18); } }
 @keyframes guide-dot { 50% { transform: scale(.7); opacity: .45; } }
+@keyframes tutorial-road-draw { 0%, 8% { stroke-dashoffset: 1; opacity: .3; } 72%, 88% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: .25; } }
+@keyframes tutorial-point-pulse { 50% { transform: translate(-50%,-50%) scale(1.14); box-shadow: 0 0 0 11px rgba(233,111,69,.24), 0 7px 15px rgba(64,66,45,.22); } }
+@keyframes drag-source-lift { 50% { transform: translateY(-4px) scale(1.015); box-shadow: 0 0 0 8px rgba(233,111,69,.09), 0 10px 16px rgba(72,56,26,.16); } }
+@keyframes drag-arrow { 50% { transform: translate(-50%, 6px); } }
+@keyframes drop-target-breathe { 50% { transform: translate(-50%,-50%) scale(1.08); box-shadow: 0 0 0 14px rgba(255,255,255,.34), 0 0 0 17px rgba(22,118,109,.09); } }
 
 @media (max-width: 420px) {
   .requirement-list, .goals-sheet-list { grid-template-columns: 1fr; }
@@ -625,6 +685,11 @@ button:focus-visible, input:focus-visible {
   .placement-tray-items > button { grid-template-columns: 36px 1fr; padding-right: 21px; }
   .placement-tray-items .building-art { width: 36px; height: 38px; }
   .placement-tray-items b { font-size: .68rem; }
+  .hands-on-coach { grid-template-columns: 43px minmax(0, 1fr) auto; gap: 7px; padding: 8px; }
+  .lesson-number { width: 41px; height: 41px; }
+  .hands-on-coach strong { font-size: .96rem; }
+  .hands-on-coach > button { min-width: 78px; padding-left: 6px; padding-right: 6px; }
+  .placement-lesson { grid-template-columns: 43px minmax(0, 1fr); }
 }
 
 @media (max-height: 760px) {
@@ -667,6 +732,7 @@ button:focus-visible, input:focus-visible {
 
 @media (max-height: 660px) {
   .game-screen.mission-game { padding-left: 9px; padding-right: 9px; padding-bottom: calc(70px + var(--safe-bottom)); }
+  .game-screen.first-road-lesson, .game-screen.first-placement-lesson { padding-bottom: calc(7px + var(--safe-bottom)); }
   .game-header { grid-template-columns: 40px 1fr; }
   .game-header .round-button { width: 40px; height: 40px; }
   .level-heading small, .level-progress { display: none; }
@@ -680,6 +746,9 @@ button:focus-visible, input:focus-visible {
   .game-toolbar { min-height: 58px; width: calc(100% - 16px); padding: 4px; border-radius: 19px; }
   .game-toolbar button { min-height: 48px; flex-direction: row; gap: 5px; }
   .game-toolbar button svg { width: 20px; }
+  .hands-on-coach { min-height: 62px; margin-bottom: 5px; padding-top: 6px; padding-bottom: 6px; }
+  .lesson-number { width: 40px; height: 40px; border-radius: 13px; font-size: 1.2rem; }
+  .hands-on-coach > button { min-height: 44px; }
 }
 
 @media (min-width: 720px) {

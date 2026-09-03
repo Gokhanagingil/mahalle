@@ -47,6 +47,7 @@ describe('Mahalle Ustası shell', () => {
   it('completes the first level through the touch-first flow', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Başla/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Şimdi dene/ }))
     const map = screen.getByRole('application')
     Object.defineProperty(map, 'getBoundingClientRect', {
       value: () => ({ left: 0, top: 0, right: 100, bottom: 118, width: 100, height: 118, x: 0, y: 0, toJSON: () => ({}) }),
