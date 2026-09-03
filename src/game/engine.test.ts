@@ -86,6 +86,26 @@ describe('multi-tool neighbourhood engine', () => {
     expect(evaluateMission(levels[3], state).complete).toBe(true)
   })
 
+  it('keeps every visible placement guide inside a valid solution', () => {
+    levels.slice(1).forEach((level) => {
+      const positions = Object.fromEntries(level.placeables.map((item) => [item.id, item.guide!.position]))
+      const result = evaluateMission(level, {
+        ...initialMissionState(level),
+        positions,
+        movedItemIds: level.placeables.map((item) => item.id),
+      })
+
+      level.placeables.forEach((item) => {
+        expect(item.guide).toBeDefined()
+        expect(positionHitsObstacle(item.guide!.position, level)).toBe(false)
+        expect(level.landmarks.every((landmark) => distance(item.guide!.position, landmark.position) >= 12)).toBe(true)
+      })
+      level.requirements.forEach((requirement) => {
+        if (requirement.kind !== 'connect') expect(result.requirements.find((item) => item.id === requirement.id)?.satisfied).toBe(true)
+      })
+    })
+  })
+
   it('evaluates the mixed placement and road mission', () => {
     const state = movedState(4, { clinic: { x: 50, y: 25 } }, [
       road('south', [[10, 108], [83, 96]]), road('north', [[83, 96], [50, 25]]),

@@ -20,6 +20,11 @@ export type Placeable = {
   type: PlaceableType
   position: Point
   label: LocalizedText
+  guide?: {
+    position: Point
+    radius: number
+    reason: LocalizedText
+  }
 }
 
 export type Obstacle = {

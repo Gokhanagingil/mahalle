@@ -34,7 +34,13 @@ export const levels: MissionLevel[] = [
       { id: 'home-b', type: 'home', position: { x: 54, y: 18 }, label: { tr: 'Kiremit ev', en: 'Terracotta home' } },
       { id: 'home-c', type: 'home', position: { x: 84, y: 49 }, label: { tr: 'Yeşil ev', en: 'Green home' } },
     ],
-    placeables: [{ id: 'stop', type: 'busStop', position: { x: 50, y: 106 }, label: { tr: 'Otobüs durağı', en: 'Bus stop' } }],
+    placeables: [{
+      id: 'stop', type: 'busStop', position: { x: 50, y: 106 }, label: { tr: 'Otobüs durağı', en: 'Bus stop' },
+      guide: {
+        position: { x: 50, y: 35 }, radius: 12,
+        reason: { tr: 'Üç eve yakın, göletten uzak', en: 'Near all three homes, away from the pond' },
+      },
+    }],
     obstacles: [{ id: 'pond', type: 'pond', position: { x: 49, y: 67 }, radius: 11, label: { tr: 'Mahalle göleti', en: 'Neighbourhood pond' } }],
     requirements: [
       { id: 'move-stop', kind: 'moved', itemIds: ['stop'], text: { tr: 'Durağı yeni yerine taşı', en: 'Move the stop to its new location' } },
@@ -54,9 +60,27 @@ export const levels: MissionLevel[] = [
     tools: ['move'],
     landmarks: [{ id: 'gate', type: 'entrance', position: { x: 51, y: 108 }, label: { tr: 'Park girişi', en: 'Park entrance' } }],
     placeables: [
-      { id: 'bench', type: 'bench', position: { x: 16, y: 104 }, label: { tr: 'Bank', en: 'Bench' } },
-      { id: 'lamp', type: 'lamp', position: { x: 33, y: 108 }, label: { tr: 'Park lambası', en: 'Park lamp' } },
-      { id: 'flowers', type: 'flowerBed', position: { x: 83, y: 105 }, label: { tr: 'Çiçeklik', en: 'Flower bed' } },
+      {
+        id: 'bench', type: 'bench', position: { x: 16, y: 104 }, label: { tr: 'Bank', en: 'Bench' },
+        guide: {
+          position: { x: 52, y: 75 }, radius: 10,
+          reason: { tr: 'Göleti gören güvenli mesafe', en: 'A safe spot with a pond view' },
+        },
+      },
+      {
+        id: 'lamp', type: 'lamp', position: { x: 33, y: 108 }, label: { tr: 'Park lambası', en: 'Park lamp' },
+        guide: {
+          position: { x: 35, y: 82 }, radius: 9,
+          reason: { tr: 'Bankı aydınlatacak kadar yakın', en: 'Close enough to light the bench' },
+        },
+      },
+      {
+        id: 'flowers', type: 'flowerBed', position: { x: 83, y: 105 }, label: { tr: 'Çiçeklik', en: 'Flower bed' },
+        guide: {
+          position: { x: 70, y: 83 }, radius: 9,
+          reason: { tr: 'Dinlenme köşesini tamamlar', en: 'Completes the rest corner' },
+        },
+      },
     ],
     obstacles: [
       { id: 'pond', type: 'pond', position: { x: 51, y: 48 }, radius: 12, label: { tr: 'Ördekli gölet', en: 'Duck pond' } },
@@ -83,9 +107,27 @@ export const levels: MissionLevel[] = [
       { id: 'entrance', type: 'entrance', position: { x: 10, y: 102 }, label: { tr: 'Pazar girişi', en: 'Market entrance' } },
     ],
     placeables: [
-      { id: 'stall-a', type: 'marketStall', position: { x: 27, y: 107 }, label: { tr: 'Meyve tezgâhı', en: 'Fruit stall' } },
-      { id: 'stall-b', type: 'marketStall', position: { x: 50, y: 107 }, label: { tr: 'Ekmek tezgâhı', en: 'Bread stall' } },
-      { id: 'stall-c', type: 'marketStall', position: { x: 73, y: 107 }, label: { tr: 'Çiçek tezgâhı', en: 'Flower stall' } },
+      {
+        id: 'stall-a', type: 'marketStall', position: { x: 27, y: 107 }, label: { tr: 'Meyve tezgâhı', en: 'Fruit stall' },
+        guide: {
+          position: { x: 20, y: 72 }, radius: 9,
+          reason: { tr: 'Sokağa yakın, geçişe engel değil', en: 'Near the street without blocking passage' },
+        },
+      },
+      {
+        id: 'stall-b', type: 'marketStall', position: { x: 50, y: 107 }, label: { tr: 'Ekmek tezgâhı', en: 'Bread stall' },
+        guide: {
+          position: { x: 49, y: 75 }, radius: 9,
+          reason: { tr: 'Diğer tezgâhtan güvenli aralıkta', en: 'A comfortable distance from the other stall' },
+        },
+      },
+      {
+        id: 'stall-c', type: 'marketStall', position: { x: 73, y: 107 }, label: { tr: 'Çiçek tezgâhı', en: 'Flower stall' },
+        guide: {
+          position: { x: 77, y: 70 }, radius: 9,
+          reason: { tr: 'Sağlık merkezinin önü açık kalır', en: 'Keeps the clinic entrance clear' },
+        },
+      },
     ],
     obstacles: [{ id: 'garden', type: 'garden', position: { x: 18, y: 34 }, radius: 9, label: { tr: 'Topluluk bahçesi', en: 'Community garden' } }],
     baseRoads: [{ id: 'main-street', points: [{ x: 8, y: 68 }, { x: 30, y: 62 }, { x: 56, y: 66 }, { x: 92, y: 58 }] }],
@@ -111,7 +153,13 @@ export const levels: MissionLevel[] = [
       { id: 'home-b', type: 'home', position: { x: 84, y: 23 }, label: { tr: 'Doğu evi', en: 'East home' } },
       { id: 'bakery', type: 'bakery', position: { x: 83, y: 96 }, label: { tr: 'Mahalle fırını', en: 'Neighbourhood bakery' } },
     ],
-    placeables: [{ id: 'clinic', type: 'clinic', position: { x: 49, y: 108 }, label: { tr: 'Yeni sağlık merkezi', en: 'New clinic' } }],
+    placeables: [{
+      id: 'clinic', type: 'clinic', position: { x: 49, y: 108 }, label: { tr: 'Yeni sağlık merkezi', en: 'New clinic' },
+      guide: {
+        position: { x: 50, y: 38 }, radius: 11,
+        reason: { tr: 'İki eve yakın, parkı koruyor', en: 'Near both homes while protecting the park' },
+      },
+    }],
     obstacles: [{ id: 'park', type: 'garden', position: { x: 50, y: 65 }, radius: 12, label: { tr: 'Merkez parkı', en: 'Central park' } }],
     requirements: [
       { id: 'move-clinic', kind: 'moved', itemIds: ['clinic'], text: { tr: 'Sağlık merkezine yeni yer bul', en: 'Find a new place for the clinic' } },

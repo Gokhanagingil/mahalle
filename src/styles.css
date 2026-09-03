@@ -239,6 +239,7 @@ button:focus-visible, input:focus-visible {
 
 /* Game */
 .game-screen { min-height: 100vh; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 14px calc(94px + var(--safe-bottom)); background: radial-gradient(circle at 80% 0%, #e4f1e7 0, transparent 32%), var(--canvas); }
+.game-screen.mission-game { height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 .game-header { max-width: 640px; margin: 0 auto 12px; display: grid; grid-template-columns: 54px 1fr; grid-template-rows: auto 6px; gap: 7px 12px; align-items: center; }
 .level-heading { display: flex; flex-direction: column; }
 .level-heading small { color: var(--muted); font-size: .78rem; font-weight: 700; }
@@ -341,14 +342,16 @@ button:focus-visible, input:focus-visible {
 .objective-copy strong { overflow: hidden; color: var(--ink); font-family: 'Nunito', sans-serif; font-size: 1rem; line-height: 1.18; text-overflow: ellipsis; }
 .objective-icon { flex: 0 0 auto; width: 43px; height: 43px; display: grid; place-items: center; border-radius: 15px; color: #7a551b; background: linear-gradient(145deg, #ffe39a, var(--sun)); }
 .objective-icon svg { width: 23px; }
-.connection-meter { flex: 0 0 auto; min-width: 65px; padding: 7px 9px; display: flex; flex-direction: column; align-items: center; border-radius: 15px; color: var(--primary-dark); background: #e7f3ec; }
+.connection-meter { flex: 0 0 auto; min-width: 65px; padding: 7px 9px; display: flex; flex-direction: column; align-items: center; border: 0; border-radius: 15px; color: var(--primary-dark); background: #e7f3ec; cursor: pointer; }
 .connection-meter strong { font-family: 'Nunito', sans-serif; font-size: 1.12rem; line-height: 1; }
 .connection-meter span { margin-top: 2px; font-size: .67rem; font-weight: 800; }
 
-.organic-map-wrap { max-width: 530px; margin: 0 auto; }
+.organic-map-wrap { width: 100%; max-width: 530px; min-height: 0; margin: 0 auto; display: flex; flex: 1 1 auto; align-items: center; justify-content: center; }
 .organic-map {
   position: relative;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
+  height: min(100%, calc((100vw - 28px) * 1.18), 625px);
   aspect-ratio: 100 / 118;
   overflow: hidden;
   isolation: isolate;
@@ -452,7 +455,18 @@ button:focus-visible, input:focus-visible {
 
 /* Multi-tool mission layer */
 .mission-brief { max-width: 640px; margin: 0 auto 9px; padding: 10px; border: 1px solid rgba(36,60,56,.08); border-radius: 22px; background: rgba(255,253,247,.94); box-shadow: 0 7px 22px rgba(38,68,61,.1); }
+.mission-game .game-header, .mission-game .mission-brief, .mission-game .mission-tool-switch, .mission-game .placement-tray, .mission-game .road-status-row { width: 100%; flex: 0 0 auto; }
 .mission-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.active-requirement { min-height: 38px; margin-top: 7px; padding: 5px 8px; display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 7px; border: 1px solid #e7d28e; border-radius: 13px; color: #57451f; background: #fff7d9; }
+.active-requirement > span { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: #f3d167; }
+.active-requirement > span i { width: 8px; height: 8px; border: 2px solid #8c6b27; border-radius: 50%; animation: guide-dot 1.45s ease-in-out infinite; }
+.active-requirement svg { width: 15px; stroke-width: 3; }
+.active-requirement > div { min-width: 0; display: flex; flex-direction: column; }
+.active-requirement small { color: #896a2c; font-size: .61rem; font-weight: 900; line-height: 1.05; letter-spacing: .035em; text-transform: uppercase; }
+.active-requirement b { overflow: hidden; font-size: .78rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.active-requirement em { font-size: .72rem; font-style: normal; font-weight: 900; }
+.active-requirement.satisfied { color: #155e55; border-color: #b9dfce; background: #e7f5ec; }
+.active-requirement.satisfied > span { color: white; background: var(--primary); }
 .requirement-list { margin-top: 9px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .requirement-chip { min-height: 37px; padding: 6px 7px; display: grid; grid-template-columns: 23px 1fr auto; align-items: center; gap: 6px; border: 1px solid #e3e7df; border-radius: 12px; color: #5c6e68; background: #f7f6f0; transition: background .25s ease, color .25s ease, transform .25s ease; }
 .requirement-chip > span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #e4e8e2; }
@@ -468,10 +482,33 @@ button:focus-visible, input:focus-visible {
 .mission-tool-switch button svg { width: 20px; }
 .mission-tool-switch button.active { color: white; background: var(--primary); box-shadow: 0 5px 11px rgba(22,118,109,.22); }
 
+.placement-tray { max-width: 530px; margin: 0 auto 7px; padding: 6px 8px 7px; border: 2px solid #e7b94c; border-radius: 18px; background: #fff9e8; box-shadow: 0 5px 13px rgba(91,69,26,.11); }
+.placement-tray-heading { min-height: 18px; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.placement-tray-heading strong { display: flex; align-items: center; gap: 5px; color: #725019; font-size: .67rem; letter-spacing: .055em; }
+.placement-tray-heading strong svg { width: 15px; height: 15px; stroke-width: 3; }
+.placement-tray-heading > span { color: #796840; font-size: .66rem; font-weight: 800; }
+.placement-tray-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+.placement-tray-items > button { position: relative; min-width: 0; height: 52px; padding: 3px 25px 3px 4px; display: grid; grid-template-columns: 43px 1fr; align-items: center; border: 2px solid #d9ded5; border-radius: 13px; color: #314c46; background: white; box-shadow: 0 3px 7px rgba(48,70,58,.08); cursor: grab; touch-action: none; }
+.placement-tray-items > button:active { cursor: grabbing; transform: scale(.97); }
+.placement-tray-items > button.is-next { border-color: #e7af36; box-shadow: 0 0 0 3px rgba(244,201,93,.24), 0 4px 9px rgba(72,56,26,.12); animation: tray-next 1.7s ease-in-out infinite; }
+.placement-tray-items > button.selected { border-color: var(--primary); background: #e9f5ef; box-shadow: 0 0 0 3px rgba(22,118,109,.18); animation: none; }
+.placement-tray-items .building-art { width: 42px; height: 42px; margin: 0; }
+.placement-tray-items b { overflow: hidden; font-size: .74rem; line-height: 1.05; text-align: left; text-overflow: ellipsis; }
+.tray-order { position: absolute; z-index: 4; left: -5px; top: -7px; width: 21px; height: 21px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; color: #624715; background: var(--sun); font-size: .68rem; font-weight: 900; }
+.tray-move { position: absolute; right: 4px; top: 50%; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 8px; color: white; background: var(--primary); transform: translateY(-50%); }
+.tray-move svg { width: 13px; height: 13px; stroke-width: 3; }
+
 .organic-map.tool-move .road-drawing-surface { cursor: default; }
 .organic-map.snap-active { box-shadow: 0 18px 38px rgba(47,78,58,.22), 0 0 0 5px rgba(244,201,93,.58); }
 .service-radius { fill: rgba(255,239,166,.14); stroke: rgba(213,155,46,.76); stroke-width: 1.1; stroke-dasharray: 2.5 2.5; animation: service-breathe 2.8s ease-in-out infinite; pointer-events: none; }
 .map-landmark.within-service .landmark-halo { opacity: 1; background: rgba(255,247,185,.78); box-shadow: 0 0 0 5px rgba(244,201,93,.38); animation: service-home 1.8s ease-in-out infinite; }
+
+.placement-guide { position: absolute; z-index: 4; min-width: 72px; min-height: 72px; display: grid; place-items: center; border: 3px dashed #d89b22; border-radius: 50%; color: #65460f; background: rgba(255,240,153,.54); box-shadow: 0 0 0 7px rgba(255,245,188,.32); transform: translate(-50%,-50%); pointer-events: none; animation: placement-breathe 1.7s ease-in-out infinite; }
+.placement-guide::before { content: ''; position: absolute; inset: -9px; border: 2px solid rgba(231,175,54,.52); border-radius: inherit; }
+.placement-guide .guide-ghost { width: 54px; height: 49px; opacity: .52; filter: grayscale(.15); }
+.placement-guide .building-art { width: 100%; height: 100%; }
+.placement-guide strong { position: absolute; left: 50%; bottom: -15px; width: max-content; padding: 4px 8px; border: 2px solid #e1aa37; border-radius: 99px; color: #65460f; background: #fff5bd; box-shadow: 0 3px 8px rgba(80,57,15,.16); font-size: .62rem; letter-spacing: .045em; transform: translateX(-50%); }
+.placement-guide.is-ready { border-color: var(--accent); background: rgba(255,225,125,.66); box-shadow: 0 0 0 9px rgba(255,244,180,.4); }
 
 .map-landmark.placeable { z-index: 5; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: grab; appearance: none; filter: drop-shadow(0 7px 4px rgba(37,65,48,.2)); transition: filter .15s ease; }
 .map-landmark.placeable:active { cursor: grabbing; }
@@ -501,9 +538,15 @@ button:focus-visible, input:focus-visible {
 .snap-toast { position: absolute; z-index: 9; left: 50%; bottom: 13px; min-height: 40px; padding: 8px 13px; display: flex; align-items: center; gap: 7px; border: 2px solid #e7ad3e; border-radius: 99px; color: #64430e; background: #fff3bb; box-shadow: 0 7px 18px rgba(93,67,20,.22); font-size: .82rem; font-weight: 900; transform: translateX(-50%); animation: snap-toast .25s ease both; white-space: nowrap; }
 .snap-toast svg { width: 18px; }
 .action-coach { position: absolute; z-index: 4; left: 50%; bottom: 13px; width: max-content; max-width: 88%; padding: 8px 13px; display: flex; align-items: center; gap: 9px; border-radius: 99px; color: #254c42; background: rgba(255,253,247,.91); box-shadow: 0 5px 15px rgba(40,70,58,.14); font-size: .8rem; transform: translateX(-50%); pointer-events: none; }
+.action-coach strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .move-pulse { position: relative; width: 26px; height: 22px; border: 2px solid var(--primary); border-radius: 8px; }
 .move-pulse::before, .move-pulse::after { content: ''; position: absolute; width: 7px; height: 7px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
 .move-pulse::before { right: -8px; top: -6px; transform: rotate(-15deg); }.move-pulse::after { left: -8px; bottom: -6px; transform: rotate(165deg); }
+.placement-coach { position: absolute; z-index: 8; left: 8px; right: 8px; top: 8px; min-height: 42px; padding: 5px 8px; display: grid; grid-template-columns: 1fr 18px 1fr; align-items: center; gap: 4px; border: 2px solid #e2ad38; border-radius: 15px; color: #5f461f; background: rgba(255,250,224,.96); box-shadow: 0 6px 15px rgba(84,67,29,.15); pointer-events: none; }
+.placement-coach span { display: flex; align-items: center; gap: 5px; font-size: .7rem; font-weight: 900; line-height: 1.1; }
+.placement-coach b { flex: 0 0 auto; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: #624715; background: var(--sun); font-size: .75rem; }
+.placement-coach i { position: relative; height: 2px; background: #d3a237; }
+.placement-coach i::after { content: ''; position: absolute; right: -1px; top: -3px; width: 7px; height: 7px; border-top: 2px solid #d3a237; border-right: 2px solid #d3a237; transform: rotate(45deg); }
 
 .app-shell.large-text .requirement-chip b { font-size: .83rem; }
 .app-shell.large-text .landmark-label { font-size: .72rem; padding: 4px 8px; }
@@ -521,6 +564,7 @@ button:focus-visible, input:focus-visible {
 .bottom-sheet { width: min(100%, 600px); padding: 10px 25px calc(24px + var(--safe-bottom)); border-radius: 30px 30px 0 0; background: var(--paper); text-align: center; animation: sheet-up 280ms cubic-bezier(.2,.8,.2,1); }
 .sheet-handle { width: 52px; height: 5px; margin: 0 auto 17px; border-radius: 99px; background: #d4d9d4; }
 .bottom-sheet p, .complete-modal > p { margin: 0 auto 17px; max-width: 360px; color: var(--muted); font-size: 1.08rem; line-height: 1.45; }
+.goals-sheet-list { display: grid; gap: 7px; text-align: left; }
 .success-seal { width: 82px; height: 82px; margin: -70px auto 17px; display: grid; place-items: center; border: 8px solid var(--paper); border-radius: 50%; color: white; background: var(--primary); box-shadow: 0 9px 20px rgba(20,110,100,.28); }
 .success-seal svg { width: 42px; height: 42px; stroke-width: 3; }
 .complete-modal .eyebrow { margin-bottom: 8px; }
@@ -561,17 +605,28 @@ button:focus-visible, input:focus-visible {
 @keyframes magnet-catch { to { transform: scale(1.28); fill: rgba(255,237,155,.52); } }
 @keyframes magnet-wave { from { opacity: .8; transform: scale(.55); } to { opacity: 0; transform: scale(1.45); } }
 @keyframes snap-toast { from { opacity: 0; transform: translate(-50%, 7px) scale(.94); } }
+@keyframes tray-next { 50% { transform: translateY(-2px); box-shadow: 0 0 0 5px rgba(244,201,93,.16), 0 6px 11px rgba(72,56,26,.13); } }
+@keyframes placement-breathe { 50% { transform: translate(-50%,-50%) scale(1.07); box-shadow: 0 0 0 12px rgba(255,245,188,.18); } }
+@keyframes guide-dot { 50% { transform: scale(.7); opacity: .45; } }
 
 @media (max-width: 420px) {
-  .requirement-list { grid-template-columns: 1fr; }
+  .requirement-list, .goals-sheet-list { grid-template-columns: 1fr; }
   .requirement-chip { min-height: 38px; padding: 6px 9px; }
   .requirement-chip b { font-size: .79rem; }
   .mission-brief { border-radius: 18px; }
+  .placement-tray-items > button { grid-template-columns: 36px 1fr; padding-right: 21px; }
+  .placement-tray-items .building-art { width: 36px; height: 38px; }
+  .placement-tray-items b { font-size: .68rem; }
 }
 
 @media (max-height: 760px) {
-  .game-screen { padding-top: 8px; }
-  .game-header { margin-bottom: 7px; }
+  .game-screen { padding-top: max(6px, env(safe-area-inset-top)); }
+  .game-screen.mission-game { padding-bottom: calc(78px + var(--safe-bottom)); }
+  .game-header { margin-bottom: 5px; grid-template-columns: 44px 1fr; grid-template-rows: auto 4px; gap: 4px 9px; }
+  .game-header .round-button { width: 44px; height: 44px; border-radius: 14px; }
+  .game-header .round-button svg { width: 21px; height: 21px; }
+  .level-heading strong { font-size: 1.08rem; }
+  .level-progress { height: 4px; }
   .goal-panel { padding: 10px 13px; margin-bottom: 7px; }
   .goal-title { margin-bottom: 5px; }
   .rule-chip { min-height: 30px; }
@@ -580,15 +635,43 @@ button:focus-visible, input:focus-visible {
   .inventory-panel { margin-top: 7px; padding: 9px 11px; }
   .inventory-item { min-height: 70px; }
   .inventory-item .building-art { height: 38px; }
-  .road-game .game-header { margin-bottom: 6px; }
+  .road-game .game-header { margin-bottom: 5px; }
   .road-objective { min-height: 61px; padding-top: 7px; padding-bottom: 7px; margin-bottom: 7px; }
   .organic-map-wrap { max-width: 410px; }
   .road-status-row { min-height: 30px; }
-  .mission-brief { margin-bottom: 6px; padding: 7px 9px; }
-  .requirement-list { margin-top: 6px; gap: 4px; }
+  .mission-brief { margin-bottom: 5px; padding: 6px 8px; }
+  .objective-icon { width: 36px; height: 36px; border-radius: 12px; }
+  .objective-icon svg { width: 20px; }
+  .objective-copy strong { font-size: .91rem; }
+  .connection-meter { padding: 5px 7px; }
+  .active-requirement { min-height: 34px; margin-top: 5px; padding-top: 3px; padding-bottom: 3px; }
+  .requirement-list { margin-top: 5px; gap: 4px; }
   .requirement-chip { min-height: 32px; padding-top: 4px; padding-bottom: 4px; }
-  .mission-tool-switch { min-height: 44px; margin-bottom: 6px; }
-  .mission-tool-switch button { min-height: 36px; }
+  .mission-tool-switch { min-height: 40px; margin-bottom: 5px; }
+  .mission-tool-switch button { min-height: 32px; }
+  .placement-tray { margin-bottom: 5px; padding-top: 4px; padding-bottom: 5px; }
+  .placement-tray-heading { margin-bottom: 2px; }
+  .placement-tray-items > button { height: 47px; }
+  .placement-tray-items .building-art { height: 37px; }
+  .game-toolbar { min-height: 64px; bottom: calc(7px + var(--safe-bottom)); }
+  .game-toolbar button { min-height: 50px; }
+}
+
+@media (max-height: 660px) {
+  .game-screen.mission-game { padding-left: 9px; padding-right: 9px; padding-bottom: calc(70px + var(--safe-bottom)); }
+  .game-header { grid-template-columns: 40px 1fr; }
+  .game-header .round-button { width: 40px; height: 40px; }
+  .level-heading small, .level-progress { display: none; }
+  .mission-brief { border-radius: 15px; }
+  .objective-copy small, .active-requirement small, .placement-tray-heading > span { display: none; }
+  .active-requirement { margin-top: 4px; }
+  .placement-tray { border-radius: 14px; }
+  .placement-tray-items > button { height: 43px; }
+  .placement-tray-items .building-art { height: 34px; }
+  .road-status-row { min-height: 24px; margin-top: 1px; }
+  .game-toolbar { min-height: 58px; width: calc(100% - 16px); padding: 4px; border-radius: 19px; }
+  .game-toolbar button { min-height: 48px; flex-direction: row; gap: 5px; }
+  .game-toolbar button svg { width: 20px; }
 }
 
 @media (min-width: 720px) {

@@ -13,7 +13,7 @@ import {
   roadLength,
   smoothPath,
 } from '../game/engine'
-import type { Locale, MissionLevel, MissionState, Point, RoadStroke, Settings } from '../game/types'
+import type { Locale, MissionLevel, MissionState, Point, Requirement, RoadStroke, Settings } from '../game/types'
 import type { SnapTarget } from '../game/engine'
 import { t } from '../i18n'
 import { placementFeedback, successFeedback } from '../utils/feedback'
@@ -35,6 +35,19 @@ type DragState = { id: string; origin: Point; point: Point; before: MissionState
 
 function hintFor(locale: Locale, levelId: number) {
   return t(locale, `hintLevel${levelId}` as 'hintLevel1' | 'hintLevel2' | 'hintLevel3' | 'hintLevel4' | 'hintLevel5')
+}
+
+function requirementIncludesItem(requirement: Requirement, id: string) {
+  if (requirement.kind === 'coverage' || requirement.kind === 'nearObstacle') return requirement.itemId === id
+  if (requirement.kind === 'nearItem') return requirement.itemId === id || requirement.targetItemId === id
+  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds.includes(id)
+  return requirement.anchorIds.includes(id)
+}
+
+function firstRequirementItem(requirement: Requirement) {
+  if (requirement.kind === 'coverage' || requirement.kind === 'nearObstacle' || requirement.kind === 'nearItem') return requirement.itemId
+  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds[0]
+  return requirement.anchorIds[0]
 }
 
 function ObstacleArt({ type, x, y, radius }: { type: 'tree' | 'pond' | 'garden'; x: number; y: number; radius: number }) {
@@ -83,6 +96,7 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
   const [freshRoadId, setFreshRoadId] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)
   const [hintOpen, setHintOpen] = useState(false)
+  const [goalsOpen, setGoalsOpen] = useState(false)
   const [showIntro, setShowIntro] = useState(true)
   const [notice, setNotice] = useState<Notice>(null)
   const noticeTimer = useRef<number | undefined>(undefined)
@@ -102,6 +116,16 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
   const previewPoints = useMemo(() => drawing.length > 1 ? magnetizePath(drawing, anchors, allRoads) : drawing, [drawing, anchors, allRoads])
   const previewHitsObstacle = previewPoints.length > 1 && pathHitsObstacle(previewPoints, level)
   const satisfiedCount = evaluation.requirements.filter((result) => result.satisfied).length
+  const unplacedItems = positionedItems.filter((item) => !mission.movedItemIds.includes(item.id))
+  const firstUnmetRequirement = level.requirements.find((requirement) => !evaluation.requirements.find((result) => result.id === requirement.id)?.satisfied)
+  const guidedItemId = activeTool === 'move'
+    ? selectedItem ?? unplacedItems[0]?.id ?? (firstUnmetRequirement ? firstRequirementItem(firstUnmetRequirement) : null)
+    : null
+  const guidedItem = positionedItems.find((item) => item.id === guidedItemId)
+  const activeRequirement = (guidedItemId
+    ? level.requirements.find((requirement) => requirement.kind !== 'moved' && requirementIncludesItem(requirement, guidedItemId) && !evaluation.requirements.find((result) => result.id === requirement.id)?.satisfied)
+    : undefined) ?? firstUnmetRequirement ?? level.requirements.at(-1)!
+  const activeRequirementResult = evaluation.requirements.find((result) => result.id === activeRequirement.id)!
   const serviceCentre = level.serviceRadius
     ? mission.positions[level.serviceRadius.itemId] ?? level.placeables.find((item) => item.id === level.serviceRadius!.itemId)!.position
     : null
@@ -218,6 +242,7 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
     setHistory((previous) => [...previous, before])
     setMission(next)
     setSelectedItem(null)
+    setShowIntro(false)
     onSave(next)
     placementFeedback(settings)
     checkCompletion(next)
@@ -250,6 +275,7 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
     dragRef.current = null
     if (!drag.moved) { setMission(drag.before); return }
     suppressItemClickRef.current = true
+    window.setTimeout(() => { suppressItemClickRef.current = false }, 0)
     commitPlacement(drag.id, drag.point, drag.before)
   }
 
@@ -297,13 +323,12 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
       <section className="mission-brief" aria-live="polite">
         <div className="mission-title-row">
           <div className="objective-copy"><span className="objective-icon">{activeTool === 'road' ? <Route /> : <Move />}</span><div><small>{t(locale, 'goals')}</small><strong>{level.objective[locale]}</strong></div></div>
-          <div className="connection-meter"><strong>{satisfiedCount}/{evaluation.requirements.length}</strong><span>{t(locale, 'goalsMet')}</span></div>
+          <button className="connection-meter" onClick={() => setGoalsOpen(true)} aria-label={t(locale, 'allGoals')}><strong>{satisfiedCount}/{evaluation.requirements.length}</strong><span>{t(locale, 'goalsMet')}</span></button>
         </div>
-        <div className="requirement-list">
-          {level.requirements.map((requirement) => {
-            const result = evaluation.requirements.find((item) => item.id === requirement.id)!
-            return <div key={requirement.id} className={`requirement-chip ${result.satisfied ? 'satisfied' : ''}`}><span>{result.satisfied ? <Check /> : <i />}</span><b>{requirement.text[locale]}</b>{result.target !== undefined && <em>{result.progress}/{result.target}</em>}</div>
-          })}
+        <div className={`active-requirement ${activeRequirementResult.satisfied ? 'satisfied' : ''}`}>
+          <span>{activeRequirementResult.satisfied ? <Check /> : <i />}</span>
+          <div><small>{t(locale, 'currentGoal')}</small><b>{activeRequirement.text[locale]}</b></div>
+          {activeRequirementResult.target !== undefined && <em>{activeRequirementResult.progress}/{activeRequirementResult.target}</em>}
         </div>
       </section>
 
@@ -312,6 +337,31 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
           <button className={activeTool === 'move' ? 'active' : ''} onClick={() => { setActiveTool('move'); setSelectedItem(null) }}><Move /> {t(locale, 'moveTool')}</button>
           <button className={activeTool === 'road' ? 'active' : ''} onClick={() => { setActiveTool('road'); setSelectedItem(null) }}><Route /> {t(locale, 'roadTool')}</button>
         </div>
+      )}
+
+      {activeTool === 'move' && unplacedItems.length > 0 && (
+        <section className="placement-tray" aria-label={t(locale, 'toPlace')}>
+          <div className="placement-tray-heading"><strong><Move /> {t(locale, 'toPlace')}</strong><span>{t(locale, 'tapOrDrag')}</span></div>
+          <div className="placement-tray-items">
+            {unplacedItems.map((item, index) => (
+              <button
+                key={item.id}
+                className={`${selectedItem === item.id ? 'selected' : ''} ${guidedItemId === item.id ? 'is-next' : ''}`}
+                aria-label={`${item.label[locale]}. ${t(locale, 'dragToMove')}`}
+                onPointerDown={(event) => beginDrag(event, item.id)} onPointerMove={dragItem} onPointerUp={finishDrag} onPointerCancel={finishDrag}
+                onClick={(event) => {
+                  if (suppressItemClickRef.current) { suppressItemClickRef.current = false; return }
+                  event.stopPropagation()
+                  setSelectedItem(item.id)
+                  setActiveTool('move')
+                  setShowIntro(false)
+                }}
+              >
+                <span className="tray-order">{index + 1}</span><BuildingArt type={item.type} decorative /><b>{item.label[locale]}</b><span className="tray-move"><Move /></span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="organic-map-wrap">
@@ -353,13 +403,24 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
             {level.obstacles.map((obstacle) => <ObstacleArt key={obstacle.id} type={obstacle.type} x={obstacle.position.x} y={obstacle.position.y} radius={obstacle.radius} />)}
           </svg>
 
+          {guidedItem?.guide && <div
+            className={`placement-guide ${selectedItem === guidedItem.id ? 'is-ready' : ''}`}
+            style={{
+              left: `${guidedItem.guide.position.x}%`,
+              top: `${(guidedItem.guide.position.y / 118) * 100}%`,
+              width: `${guidedItem.guide.radius * 2}%`,
+              aspectRatio: '1',
+            }}
+            aria-hidden="true"
+          ><span className="guide-ghost"><BuildingArt type={guidedItem.type} decorative /></span><strong>{t(locale, 'placeHere')}</strong></div>}
+
           {level.landmarks.map((landmark, index) => {
             const connected = evaluation.connectedAnchorIds.includes(landmark.id)
             const withinService = !!(serviceCentre && level.serviceRadius && distance(serviceCentre, landmark.position) <= level.serviceRadius.radius)
             return <div key={landmark.id} className={`map-landmark landmark-${landmark.type} ${connected ? 'is-connected' : ''} ${withinService ? 'within-service' : ''}`} style={{ left: `${landmark.position.x}%`, top: `${(landmark.position.y / 118) * 100}%`, '--landmark-delay': `${index * 90}ms` } as React.CSSProperties}><span className="landmark-halo" /><BuildingArt type={landmark.type} decorative /><span className="landmark-label">{landmark.label[locale]}</span></div>
           })}
 
-          {positionedItems.map((item) => (
+          {positionedItems.filter((item) => mission.movedItemIds.includes(item.id) || dragRef.current?.id === item.id).map((item) => (
             <button
               key={item.id} className={`map-landmark placeable landmark-${item.type} ${selectedItem === item.id ? 'is-selected' : ''} ${mission.movedItemIds.includes(item.id) ? 'was-moved' : ''}`}
               style={{ left: `${item.position.x}%`, top: `${(item.position.y / 118) * 100}%` }} aria-label={`${item.label[locale]}. ${t(locale, 'dragToMove')}`}
@@ -369,21 +430,23 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
                 if (suppressItemClickRef.current) { suppressItemClickRef.current = false; return }
                 setSelectedItem(item.id)
                 setActiveTool('move')
+                setShowIntro(false)
               }}
             ><span className="drag-ring" /><BuildingArt type={item.type} decorative /><span className="landmark-label">{item.label[locale]}</span><span className="drag-handle"><Move /></span></button>
           ))}
 
-          {showIntro && <div className="map-coach" role="status"><span className="coach-avatar"><HelpCircle /></span><p>{level.intro[locale]}</p><button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button></div>}
-          {!showIntro && !drawing.length && !notice && <div className={`action-coach coach-${activeTool}`} aria-hidden="true"><span className={activeTool === 'road' ? 'finger-trail' : 'move-pulse'} /> <strong>{activeTool === 'road' ? t(locale, 'drawCoachShort') : t(locale, 'moveCoachShort')}</strong></div>}
+          {showIntro && activeTool === 'road' && <div className="map-coach" role="status"><span className="coach-avatar"><HelpCircle /></span><p>{level.intro[locale]}</p><button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button></div>}
+          {showIntro && activeTool === 'move' && <div className="placement-coach" role="status"><span><b>1</b>{t(locale, 'chooseItemStep')}</span><i /><span><b>2</b>{t(locale, 'choosePlaceStep')}</span></div>}
+          {!showIntro && !drawing.length && !notice && <div className={`action-coach coach-${activeTool}`} aria-hidden="true"><span className={activeTool === 'road' ? 'finger-trail' : 'move-pulse'} /> <strong>{activeTool === 'road' ? t(locale, 'drawCoachShort') : selectedItem ? `${positionedItems.find((item) => item.id === selectedItem)?.label[locale]} ${t(locale, 'selectedItem')} — ${t(locale, 'choosePlaceStep')}` : t(locale, 'moveCoachShort')}</strong></div>}
           {snapTarget && drawing.length > 0 && <div className="snap-toast" role="status"><Sparkles /> {t(locale, snapTarget.kind === 'road' ? 'snapToRoad' : 'snapToPlace')}</div>}
           {notice && <div className={`map-notice notice-${notice}`} role="status"><span>{notice === 'obstacle' || notice === 'placement' ? '🌿' : notice === 'junction' ? '✨' : notice === 'budget' ? '✂️' : '↗'}</span>{noticeCopy}</div>}
         </div>
       </section>
 
-      <div className={`road-status-row ${!evaluation.withinBudget ? 'over-budget' : ''}`}>
-        {level.tools.includes('road') ? <span><Route /> {level.roadBudget ? t(locale, 'roadBudget') : t(locale, 'roadLength')}: <strong>{Math.round(evaluation.totalLength)}{level.roadBudget ? ` / ${level.roadBudget}` : ''} m</strong></span> : <span><Move /> {t(locale, 'freePlacement')}</span>}
+      {level.tools.includes('road') && <div className={`road-status-row ${!evaluation.withinBudget ? 'over-budget' : ''}`}>
+        <span><Route /> {level.roadBudget ? t(locale, 'roadBudget') : t(locale, 'roadLength')}: <strong>{Math.round(evaluation.totalLength)}{level.roadBudget ? ` / ${level.roadBudget}` : ''} m</strong></span>
         <span className="alive-status"><i /> {t(locale, satisfiedCount ? 'neighbourhoodAlive' : 'planning')}</span>
-      </div>
+      </div>}
 
       <nav className="game-toolbar" aria-label={locale === 'tr' ? 'Oyun işlemleri' : 'Game actions'}>
         <button onClick={undo} disabled={!history.length}><Undo2 /><span>{t(locale, 'undo')}</span></button>
@@ -392,6 +455,11 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
       </nav>
 
       {hintOpen && <div className="bottom-sheet-backdrop" onClick={() => setHintOpen(false)}><section className="bottom-sheet" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="hint-title"><div className="sheet-handle" /><span className="sheet-icon"><Lightbulb /></span><h2 id="hint-title">{t(locale, 'hintIntro')}</h2><p>{hintFor(locale, level.id)}</p><button className="primary-button" onClick={() => setHintOpen(false)}>{t(locale, 'resume')}</button></section></div>}
+
+      {goalsOpen && <div className="bottom-sheet-backdrop" onClick={() => setGoalsOpen(false)}><section className="bottom-sheet goals-sheet" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="goals-title"><div className="sheet-handle" /><h2 id="goals-title">{t(locale, 'allGoals')}</h2><div className="goals-sheet-list">{level.requirements.map((requirement) => {
+        const result = evaluation.requirements.find((item) => item.id === requirement.id)!
+        return <div key={requirement.id} className={`requirement-chip ${result.satisfied ? 'satisfied' : ''}`}><span>{result.satisfied ? <Check /> : <i />}</span><b>{requirement.text[locale]}</b>{result.target !== undefined && <em>{result.progress}/{result.target}</em>}</div>
+      })}</div><button className="primary-button" onClick={() => setGoalsOpen(false)}>{t(locale, 'resume')}</button></section></div>}
 
       {paused && <div className="modal-backdrop"><section className="pause-modal" role="dialog" aria-modal="true"><span className="modal-icon"><Pause /></span><h2>{t(locale, 'pause')}</h2><button className="primary-button" onClick={() => setPaused(false)}><Play /> {t(locale, 'resume')}</button><button className="modal-action" onClick={restart}><RotateCcw /> {t(locale, 'restart')}</button><button className="modal-action" onClick={onHome}><ArrowLeft /> {t(locale, 'home')}</button></section></div>}
 

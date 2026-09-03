@@ -14,6 +14,10 @@ Oyunun ana dili Türkçedir. Ayarlardan İngilizceye geçilebilir.
 - Binalara ve mevcut sokaklara geniş alanlı manyetik bağlanma, dokunsal geri bildirim ve görünür yakalama animasyonu
 - Izgara yerine organik arazi ve gerçek bir yol ağı
 - Sürükle-bırak ve dokun-yerleştir seçenekleri
+- Sabit yapılardan ayrılan belirgin “Yerleştirilecekler” tepsisi
+- Her taşınabilir öğe için haritada görünür, geçerli ve gerekçeli uygun alan rehberi
+- Uzun görev listesi yerine sıradaki kararı gösteren aşamalı yönlendirme
+- Küçük telefonlarda kaydırmasız, tek ekran oyun yerleşimi
 - Canlı güncellenen, birden fazla koşullu görevler
 - Yol çizme, hizmet alanı bulma, park düzenleme ve pazar kurma gibi farklı oyun kipleri
 - 60+ kullanıcılar için büyük kontroller ve güçlü okunabilirlik
@@ -64,4 +68,4 @@ APK çıktısı `android/app/build/outputs/apk/debug/app-debug.apk` altında olu
 
 ## Durum
 
-MVP-3; çok araçlı görev motoru, kendiliğinden birleşen yol ve kavşaklar, serbest nesne yerleştirme, canlı koşul geri bildirimi, Türkçe/İngilizce arayüz, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.
+MVP-4; çok araçlı görev motoru, kendiliğinden birleşen yol ve kavşaklar, dokun-yerleştir ile sürükle-bırak seçenekleri, görünür uygun alan rehberleri, kaydırmasız mobil oyun yerleşimi, canlı koşul geri bildirimi, Türkçe/İngilizce arayüz, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.

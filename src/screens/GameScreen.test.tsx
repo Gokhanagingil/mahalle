@@ -37,12 +37,17 @@ function renderLevel(levelIndex: number) {
 describe('multi-tool mission interface', () => {
   it('completes the bus-stop mission by selecting and placing an object', async () => {
     const { map, props } = renderLevel(1)
+    expect(screen.getByLabelText('YERLEŞTİRİLECEKLER')).toBeInTheDocument()
+    expect(screen.getByText('UYGUN YER')).toBeInTheDocument()
+    expect(screen.getByText('Önce bir öğeye dokun')).toBeInTheDocument()
+
     fireEvent.click(screen.getByRole('button', { name: /Otobüs durağı/ }))
+    expect(screen.getByText(/Otobüs durağı seçildi/)).toBeInTheDocument()
     fireEvent.click(map, { clientX: 50, clientY: 35 })
 
     expect(await screen.findByRole('heading', { name: 'Mahalle canlandı!' })).toBeInTheDocument()
     expect(props.onComplete).toHaveBeenCalledOnce()
-    expect(screen.getAllByText('3/3')).toHaveLength(2)
+    expect(screen.getByText('3/3')).toBeInTheDocument()
   })
 
   it('offers distinct placement and road tools in the mixed mission', () => {
