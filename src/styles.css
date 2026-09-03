@@ -186,9 +186,9 @@ button:focus-visible, input:focus-visible {
 .hero-card h1 { margin: 9px 0 5px; font-family: 'Nunito', sans-serif; font-size: clamp(2.2rem, 9vw, 3.25rem); line-height: .98; color: var(--primary-dark); letter-spacing: -.04em; }
 .hero-tagline { max-width: 310px; margin: 13px auto 22px; color: var(--muted); font-size: 1.1rem; line-height: 1.42; }
 .progress-pill { display: flex; width: fit-content; margin: -4px auto 18px; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 99px; background: #f4eee1; color: var(--primary-dark); }
-.progress-dots { display: flex; gap: 5px; }
-.progress-dots i { display: block; width: 10px; height: 10px; border-radius: 50%; background: #d7d3c8; }
-.progress-dots i.filled { background: var(--accent); }
+.progress-chapters { display: flex; gap: 5px; }
+.progress-chapters > i { width: 25px; height: 9px; overflow: hidden; border-radius: 99px; background: #d7d3c8; }
+.progress-chapters > i > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .35s ease; }
 .play-button { width: 100%; margin-bottom: 14px; }
 .play-button svg { margin-left: auto; }
 .secondary-button { width: 100%; }
@@ -224,6 +224,11 @@ button:focus-visible, input:focus-visible {
 .levels-screen { position: relative; overflow: hidden; }
 .level-list { position: relative; z-index: 2; max-width: 550px; margin: 0 auto; display: grid; gap: 13px; }
 .level-path { position: absolute; z-index: 0; top: 140px; bottom: 0; left: 50%; width: 130px; transform: translateX(-50%); background: radial-gradient(ellipse at center, rgba(134,187,118,.2), transparent 70%); }
+.chapter-heading { margin: 17px 2px 0; padding: 0 7px; display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 8px; color: var(--primary-dark); }
+.chapter-heading:first-child { margin-top: 0; }
+.chapter-heading span { color: #8a692e; font-size: .72rem; font-weight: 900; letter-spacing: .055em; text-transform: uppercase; }
+.chapter-heading strong { font-family: 'Nunito', sans-serif; font-size: 1.06rem; }
+.chapter-heading small { color: var(--muted); font-size: .72rem; font-weight: 800; }
 .level-card { width: 100%; min-height: 86px; padding: 13px 14px; display: grid; grid-template-columns: 58px 1fr auto; align-items: center; gap: 13px; border: 2px solid transparent; border-radius: 23px; background: var(--paper); box-shadow: var(--soft-shadow); text-align: left; cursor: pointer; }
 .level-card:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 .level-card.current { border-color: #f0b84b; background: #fffae9; }
@@ -408,6 +413,9 @@ button:focus-visible, input:focus-visible {
 .map-landmark .building-art { width: 100%; height: 100%; animation-delay: var(--landmark-delay); }
 .map-landmark.landmark-busStop { width: clamp(58px, 18vw, 78px); }
 .map-landmark.landmark-entrance { width: clamp(72px, 23vw, 94px); }
+.map-landmark.landmark-pharmacy { width: clamp(63px, 20vw, 86px); }
+.map-landmark.landmark-square { width: clamp(60px, 19vw, 82px); }
+.map-landmark.landmark-park { width: clamp(62px, 20vw, 85px); }
 .landmark-halo { position: absolute; z-index: -1; left: 50%; bottom: 1%; width: 42%; aspect-ratio: 1; border-radius: 50%; background: rgba(255, 255, 255, .52); transform: translateX(-50%) scale(.7); opacity: 0; }
 .map-landmark.is-connected .landmark-halo { opacity: 1; animation: connected-pulse 2.2s ease-in-out infinite; box-shadow: 0 0 0 5px rgba(255, 224, 120, .45); }
 .map-landmark.is-connected .building-art { filter: drop-shadow(0 6px 4px rgba(35, 62, 47, .18)) brightness(1.05); }

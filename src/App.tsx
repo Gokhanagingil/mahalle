@@ -28,7 +28,11 @@ export function App() {
   ].filter(Boolean).join(' ')
 
   function begin() {
-    setGame((previous) => ({ ...previous, hasStarted: true }))
+    setGame((previous) => {
+      const currentId = levels[previous.currentLevel]?.id
+      const shouldAdvance = previous.completedLevels.includes(currentId) && previous.currentLevel < levels.length - 1
+      return { ...previous, hasStarted: true, currentLevel: shouldAdvance ? previous.currentLevel + 1 : previous.currentLevel }
+    })
     setScreen('game')
   }
 
@@ -84,6 +88,7 @@ export function App() {
           locale={game.settings.locale}
           hasStarted={game.hasStarted}
           completedCount={game.completedLevels.length}
+          totalCount={levels.length}
           onPlay={begin}
           onLevels={() => setScreen('levels')}
           onSettings={() => setScreen('settings')}
@@ -108,6 +113,7 @@ export function App() {
           locale={game.settings.locale}
           settings={game.settings}
           initialMission={initialMission}
+          totalLevels={levels.length}
           onSave={saveMission}
           onComplete={completeLevel}
           onNext={nextLevel}

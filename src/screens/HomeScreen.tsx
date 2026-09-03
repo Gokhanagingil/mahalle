@@ -8,12 +8,13 @@ type Props = {
   locale: Locale
   hasStarted: boolean
   completedCount: number
+  totalCount: number
   onPlay: () => void
   onLevels: () => void
   onSettings: () => void
 }
 
-export function HomeScreen({ locale, hasStarted, completedCount, onPlay, onLevels, onSettings }: Props) {
+export function HomeScreen({ locale, hasStarted, completedCount, totalCount, onPlay, onLevels, onSettings }: Props) {
   return (
     <main className="home-screen">
       <AmbientScene />
@@ -30,11 +31,14 @@ export function HomeScreen({ locale, hasStarted, completedCount, onPlay, onLevel
         <p className="hero-tagline">{t(locale, 'tagline')}</p>
 
         {hasStarted && (
-          <div className="progress-pill" aria-label={`${t(locale, 'progress')}: ${completedCount}/5`}>
-            <span className="progress-dots" aria-hidden="true">
-              {[0, 1, 2, 3, 4].map((index) => <i key={index} className={index < completedCount ? 'filled' : ''} />)}
+          <div className="progress-pill" aria-label={`${t(locale, 'progress')}: ${completedCount}/${totalCount}`}>
+            <span className="progress-chapters" aria-hidden="true">
+              {Array.from({ length: Math.ceil(totalCount / 5) }, (_, index) => {
+                const chapterProgress = Math.max(0, Math.min(5, completedCount - index * 5))
+                return <i key={index}><span style={{ width: `${chapterProgress * 20}%` }} /></i>
+              })}
             </span>
-            <strong>{completedCount}/5</strong>
+            <strong>{completedCount}/{totalCount}</strong>
           </div>
         )}
 

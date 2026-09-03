@@ -58,7 +58,16 @@ APK çıktısı `android/app/build/outputs/apk/debug/app-debug.apk` altında olu
 - Vitest + Testing Library
 - Veri tabanlı bölüm ve yol-ağı graf motoru
 
-## İlk beş görev
+## Bölümler
+
+Oyun, beşer görevden oluşan dört mahalle etabına ayrılır:
+
+- **İlk Sokak (1–5):** Yol çizme, ilk durak, park, pazar ve karma mahalle merkezi.
+- **Meydan Çevresi (6–10):** Meydan oturma alanları, eczane, sokak ışıkları, çiçeklendirme ve meydan yol ağı.
+- **Yeşil Mahalle (11–15):** İki durak, göl çevresi yolları, yeşil dinlenme alanı, hizmet dağılımı ve park ağı.
+- **Birlikte Yaşam (16–20):** Erişimi açık pazar, eczane bağlantısı, ortak park, mahalle şenliği ve karma final planı.
+
+İlk beş görev temel etkileşimleri tanıtır:
 
 1. **Sıcak Ekmek Sokağı:** Parmağınla ilk yolu çiz; yol yaklaşınca kapılara çekilir.
 2. **Durak Nerede Olsun?:** Durağı üç eve hizmet veren, göletten güvenli bir noktaya taşı.
@@ -68,4 +77,4 @@ APK çıktısı `android/app/build/outputs/apk/debug/app-debug.apk` altında olu
 
 ## Durum
 
-MVP-4; çok araçlı görev motoru, kendiliğinden birleşen yol ve kavşaklar, dokun-yerleştir ile sürükle-bırak seçenekleri, görünür uygun alan rehberleri, kaydırmasız mobil oyun yerleşimi, canlı koşul geri bildirimi, Türkçe/İngilizce arayüz, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.
+MVP-5; 20 görev ve dört mahalle etabı, çok araçlı görev motoru, kendiliğinden birleşen yol ve kavşaklar, dokun-yerleştir ile sürükle-bırak seçenekleri, görünür uygun alan rehberleri, kaydırmasız mobil oyun yerleşimi, canlı koşul geri bildirimi, Türkçe/İngilizce arayüz, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.

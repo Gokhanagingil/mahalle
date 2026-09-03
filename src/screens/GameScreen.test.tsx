@@ -21,6 +21,7 @@ function renderLevel(levelIndex: number) {
     locale: 'tr' as const,
     settings,
     initialMission: initialMissionState(level),
+    totalLevels: levels.length,
     onSave: vi.fn(),
     onComplete: vi.fn(),
     onNext: vi.fn(),

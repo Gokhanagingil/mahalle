@@ -236,6 +236,12 @@ export function evaluateMission(level: MissionLevel, state: MissionState): Missi
       satisfied = (requirement.min === undefined || gap >= requirement.min) && (requirement.max === undefined || gap <= requirement.max)
     } else if (requirement.kind === 'nearItem') {
       satisfied = distance(positions.get(requirement.itemId)!, positions.get(requirement.targetItemId)!) <= requirement.max
+    } else if (requirement.kind === 'nearLandmark') {
+      const landmark = positions.get(requirement.landmarkId)!
+      satisfied = requirement.itemIds.every((id) => {
+        const gap = distance(positions.get(id)!, landmark)
+        return (requirement.min === undefined || gap >= requirement.min) && (requirement.max === undefined || gap <= requirement.max)
+      })
     } else if (requirement.kind === 'separated') {
       satisfied = requirement.itemIds.every((id, index) => requirement.itemIds.slice(index + 1).every((other) => distance(positions.get(id)!, positions.get(other)!) >= requirement.min))
     } else if (requirement.kind === 'nearRoad') {

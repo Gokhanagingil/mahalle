@@ -16,6 +16,7 @@ import {
 import type { Locale, MissionLevel, MissionState, Point, Requirement, RoadStroke, Settings } from '../game/types'
 import type { SnapTarget } from '../game/engine'
 import { t } from '../i18n'
+import type { TranslationKey } from '../i18n'
 import { placementFeedback, successFeedback } from '../utils/feedback'
 import { useWakeLock } from '../hooks/useWakeLock'
 
@@ -24,6 +25,7 @@ type Props = {
   locale: Locale
   settings: Settings
   initialMission: MissionState
+  totalLevels: number
   onSave: (mission: MissionState) => void
   onComplete: (mission: MissionState) => void
   onNext: () => void
@@ -34,19 +36,19 @@ type Notice = 'short' | 'obstacle' | 'budget' | 'placement' | 'junction' | null
 type DragState = { id: string; origin: Point; point: Point; before: MissionState; moved: boolean }
 
 function hintFor(locale: Locale, levelId: number) {
-  return t(locale, `hintLevel${levelId}` as 'hintLevel1' | 'hintLevel2' | 'hintLevel3' | 'hintLevel4' | 'hintLevel5')
+  return t(locale, `hintLevel${levelId}` as TranslationKey)
 }
 
 function requirementIncludesItem(requirement: Requirement, id: string) {
   if (requirement.kind === 'coverage' || requirement.kind === 'nearObstacle') return requirement.itemId === id
   if (requirement.kind === 'nearItem') return requirement.itemId === id || requirement.targetItemId === id
-  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds.includes(id)
+  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'nearLandmark' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds.includes(id)
   return requirement.anchorIds.includes(id)
 }
 
 function firstRequirementItem(requirement: Requirement) {
   if (requirement.kind === 'coverage' || requirement.kind === 'nearObstacle' || requirement.kind === 'nearItem') return requirement.itemId
-  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds[0]
+  if (requirement.kind === 'moved' || requirement.kind === 'nearRoad' || requirement.kind === 'nearLandmark' || requirement.kind === 'separated' || requirement.kind === 'awayFromLandmark') return requirement.itemIds[0]
   return requirement.anchorIds[0]
 }
 
@@ -80,7 +82,7 @@ function ObstacleArt({ type, x, y, radius }: { type: 'tree' | 'pond' | 'garden';
   )
 }
 
-export function GameScreen({ level, locale, settings, initialMission, onSave, onComplete, onNext, onHome }: Props) {
+export function GameScreen({ level, locale, settings, initialMission, totalLevels, onSave, onComplete, onNext, onHome }: Props) {
   const [mission, setMission] = useState<MissionState>(initialMission)
   const [history, setHistory] = useState<MissionState[]>([])
   const [activeTool, setActiveTool] = useState(level.tools[0])
@@ -316,8 +318,8 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
     <main className="game-screen road-game mission-game">
       <header className="game-header">
         <button className="round-button" onClick={() => setPaused(true)} aria-label={t(locale, 'pause')}><Pause /></button>
-        <div className="level-heading"><small>{t(locale, 'level')} {level.id} / 5</small><strong>{level.name[locale]}</strong></div>
-        <div className="level-progress" aria-hidden="true"><i style={{ width: `${level.id * 20}%` }} /></div>
+        <div className="level-heading"><small>{t(locale, 'level')} {level.id} / {totalLevels}</small><strong>{level.name[locale]}</strong></div>
+        <div className="level-progress" aria-hidden="true"><i style={{ width: `${(level.id / totalLevels) * 100}%` }} /></div>
       </header>
 
       <section className="mission-brief" aria-live="polite">
@@ -463,7 +465,7 @@ export function GameScreen({ level, locale, settings, initialMission, onSave, on
 
       {paused && <div className="modal-backdrop"><section className="pause-modal" role="dialog" aria-modal="true"><span className="modal-icon"><Pause /></span><h2>{t(locale, 'pause')}</h2><button className="primary-button" onClick={() => setPaused(false)}><Play /> {t(locale, 'resume')}</button><button className="modal-action" onClick={restart}><RotateCcw /> {t(locale, 'restart')}</button><button className="modal-action" onClick={onHome}><ArrowLeft /> {t(locale, 'home')}</button></section></div>}
 
-      {complete && <div className="modal-backdrop celebration"><div className="confetti" aria-hidden="true">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div><section className="complete-modal" role="dialog" aria-modal="true"><span className="success-seal"><Check /></span><p className="eyebrow"><Sparkles /> {level.name[locale]}</p><h2>{level.id === 5 ? t(locale, 'allCompleteTitle') : t(locale, 'completeTitle')}</h2><p>{level.id === 5 ? t(locale, 'allCompleteBody') : t(locale, 'completeBody')}</p>{evaluation.efficient && level.tools.includes('road') && <div className="master-route-badge"><Route /><div><strong>{t(locale, 'efficientRoute')}</strong><span>{t(locale, 'efficientBody')}</span></div></div>}<div className="mini-neighbourhood">{[...level.landmarks, ...positionedItems].slice(0, 4).map((item) => <BuildingArt key={item.id} type={item.type} decorative />)}</div>{level.id < 5 ? <button className="primary-button" onClick={onNext}>{t(locale, 'nextLevel')} <ArrowLeft className="arrow-next" /></button> : <button className="primary-button" onClick={onHome}>{t(locale, 'home')}</button>}</section></div>}
+      {complete && <div className="modal-backdrop celebration"><div className="confetti" aria-hidden="true">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div><section className="complete-modal" role="dialog" aria-modal="true"><span className="success-seal"><Check /></span><p className="eyebrow"><Sparkles /> {level.name[locale]}</p><h2>{level.id === totalLevels ? t(locale, 'allCompleteTitle') : level.id % 5 === 0 ? t(locale, 'chapterCompleteTitle') : t(locale, 'completeTitle')}</h2><p>{level.id === totalLevels ? t(locale, 'allCompleteBody') : level.id % 5 === 0 ? t(locale, 'chapterCompleteBody') : t(locale, 'completeBody')}</p>{evaluation.efficient && level.tools.includes('road') && <div className="master-route-badge"><Route /><div><strong>{t(locale, 'efficientRoute')}</strong><span>{t(locale, 'efficientBody')}</span></div></div>}<div className="mini-neighbourhood">{[...level.landmarks, ...positionedItems].slice(0, 4).map((item) => <BuildingArt key={item.id} type={item.type} decorative />)}</div>{level.id < totalLevels ? <button className="primary-button" onClick={onNext}>{t(locale, 'nextLevel')} <ArrowLeft className="arrow-next" /></button> : <button className="primary-button" onClick={onHome}>{t(locale, 'home')}</button>}</section></div>}
     </main>
   )
 }

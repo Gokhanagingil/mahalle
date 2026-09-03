@@ -2,9 +2,9 @@ export type Locale = 'tr' | 'en'
 export type Point = { x: number; y: number }
 export type LocalizedText = { tr: string; en: string }
 
-export type LandmarkType = 'home' | 'bakery' | 'clinic' | 'busStop' | 'entrance' | 'park'
-export type PlaceableType = 'busStop' | 'clinic' | 'bench' | 'lamp' | 'flowerBed' | 'marketStall'
-export type MapObjectType = LandmarkType | PlaceableType | 'road' | 'pharmacy' | 'square'
+export type LandmarkType = 'home' | 'bakery' | 'clinic' | 'busStop' | 'entrance' | 'park' | 'pharmacy' | 'square'
+export type PlaceableType = 'busStop' | 'clinic' | 'bench' | 'lamp' | 'flowerBed' | 'marketStall' | 'pharmacy' | 'square' | 'park'
+export type MapObjectType = LandmarkType | PlaceableType | 'road'
 export type ObstacleType = 'tree' | 'pond' | 'garden'
 export type ToolKind = 'road' | 'move'
 
@@ -43,6 +43,7 @@ export type Requirement =
   | RequirementBase & { kind: 'coverage'; itemId: string; targetIds: string[]; radius: number; count: number }
   | RequirementBase & { kind: 'nearObstacle'; itemId: string; obstacleId: string; min?: number; max?: number }
   | RequirementBase & { kind: 'nearItem'; itemId: string; targetItemId: string; max: number }
+  | RequirementBase & { kind: 'nearLandmark'; itemIds: string[]; landmarkId: string; min?: number; max?: number }
   | RequirementBase & { kind: 'separated'; itemIds: string[]; min: number }
   | RequirementBase & { kind: 'nearRoad'; itemIds: string[]; max: number }
   | RequirementBase & { kind: 'awayFromLandmark'; itemIds: string[]; landmarkId: string; min: number }
@@ -63,6 +64,13 @@ export type MissionLevel = {
   efficientLength?: number
   tutorialPath?: Point[]
   serviceRadius?: { itemId: string; radius: number }
+}
+
+export type Chapter = {
+  id: number
+  startLevel: number
+  endLevel: number
+  name: LocalizedText
 }
 
 export type RequirementResult = { id: string; satisfied: boolean; progress?: number; target?: number }

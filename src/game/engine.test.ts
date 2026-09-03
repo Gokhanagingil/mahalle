@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { levels } from './levels'
+import { chapters, levels } from './levels'
 import {
   distance,
   evaluateMission,
@@ -22,6 +22,12 @@ const movedState = (levelIndex: number, positions: MissionState['positions'], ro
 })
 
 describe('multi-tool neighbourhood engine', () => {
+  it('contains four complete five-level neighbourhood stages', () => {
+    expect(levels.map((level) => level.id)).toEqual(Array.from({ length: 20 }, (_, index) => index + 1))
+    expect(chapters).toHaveLength(4)
+    chapters.forEach((chapter) => expect(chapter.endLevel - chapter.startLevel + 1).toBe(5))
+  })
+
   it('measures ordinary and segment distance correctly', () => {
     expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5)
     expect(pointToSegmentDistance({ x: 5, y: 4 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toBe(4)
@@ -101,7 +107,12 @@ describe('multi-tool neighbourhood engine', () => {
         expect(level.landmarks.every((landmark) => distance(item.guide!.position, landmark.position) >= 12)).toBe(true)
       })
       level.requirements.forEach((requirement) => {
-        if (requirement.kind !== 'connect') expect(result.requirements.find((item) => item.id === requirement.id)?.satisfied).toBe(true)
+        if (requirement.kind !== 'connect') {
+          expect(
+            result.requirements.find((item) => item.id === requirement.id)?.satisfied,
+            `Level ${level.id}, requirement ${requirement.id}`,
+          ).toBe(true)
+        }
       })
     })
   })
@@ -114,6 +125,63 @@ describe('multi-tool neighbourhood engine', () => {
     expect(result.withinBudget).toBe(true)
     expect(result.complete).toBe(true)
     expect(result.efficient).toBe(true)
+  })
+
+  it('keeps every new road mission solvable around protected areas and within budget', () => {
+    const solutions: Array<{ levelIndex: number; positions: MissionState['positions']; roads: RoadStroke[] }> = [
+      {
+        levelIndex: 9,
+        positions: {},
+        roads: [
+          road('south-west', [[10, 106], [50, 76]]),
+          road('north-west', [[50, 76], [30, 60], [27, 45], [19, 23]]),
+          road('north-east', [[50, 76], [70, 60], [73, 45], [81, 23]]),
+        ],
+      },
+      {
+        levelIndex: 11,
+        positions: {},
+        roads: [
+          road('north', [[18, 22], [42, 12], [58, 12], [84, 23]]),
+          road('east', [[84, 23], [84, 99]]),
+          road('south', [[84, 99], [10, 106]]),
+        ],
+      },
+      {
+        levelIndex: 14,
+        positions: { park: { x: 50, y: 40 } },
+        roads: [
+          road('south', [[10, 106], [84, 100]]),
+          road('park-branch', [[50, 40], [72, 58], [75, 78], [84, 100]]),
+        ],
+      },
+      {
+        levelIndex: 16,
+        positions: { pharmacy: { x: 50, y: 39 } },
+        roads: [
+          road('south', [[10, 106], [87, 100]]),
+          road('pharmacy-branch', [[50, 39], [72, 54], [76, 76], [87, 100]]),
+        ],
+      },
+      {
+        levelIndex: 19,
+        positions: { clinic: { x: 33, y: 44 }, stop: { x: 67, y: 44 } },
+        roads: [
+          road('south', [[9, 108], [50, 108], [88, 100]]),
+          road('square-branch', [[9, 108], [25, 85], [50, 70]]),
+          road('clinic-branch', [[50, 70], [33, 44]]),
+          road('stop-branch', [[50, 70], [67, 44]]),
+        ],
+      },
+    ]
+
+    solutions.forEach(({ levelIndex, positions, roads }) => {
+      const level = levels[levelIndex]
+      roads.forEach((item) => expect(pathHitsObstacle(item.points, level), `Level ${level.id}, road ${item.id}`).toBe(false))
+      const result = evaluateMission(level, movedState(levelIndex, positions, roads))
+      expect(result.complete, `Level ${level.id}`).toBe(true)
+      expect(result.withinBudget, `Level ${level.id} budget`).toBe(true)
+    })
   })
 
   it('recognises road allowance and exact polyline length', () => {

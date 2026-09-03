@@ -29,6 +29,21 @@ describe('Mahalle Ustası shell', () => {
     expect(screen.getByRole('button', { name: /Devam Et/ })).toBeInTheDocument()
   })
 
+  it('continues an existing five-level save at the first new level', () => {
+    localStorage.setItem('mahalle-ustasi-save-v3', JSON.stringify({
+      hasStarted: true,
+      currentLevel: 4,
+      completedLevels: [1, 2, 3, 4, 5],
+      missions: {},
+      settings: { locale: 'tr', sound: true, haptics: true, highContrast: false, largeText: false, reducedMotion: false },
+    }))
+    render(<App />)
+    expect(screen.getByLabelText('İlerlemeniz: 5/20')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Devam Et/ }))
+    expect(screen.getByText('Bölüm 6 / 20')).toBeInTheDocument()
+    expect(screen.getByText('Meydanda Oturalım')).toBeInTheDocument()
+  })
+
   it('completes the first level through the touch-first flow', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Başla/ }))
