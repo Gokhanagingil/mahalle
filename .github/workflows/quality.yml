@@ -66,19 +66,26 @@ jobs:
       - run: cd android && ./gradlew assembleDebug
       - name: Verify stable APK signing identity
         run: |
+          apk_path="android/app/build/outputs/apk/debug/app-debug.apk"
           apksigner_path="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" \
             -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$apksigner_path"
-          apk_fingerprint="$("$apksigner_path" verify --print-certs \
-            android/app/build/outputs/apk/debug/app-debug.apk | \
-            sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
-          key_fingerprint="$(keytool -exportcert \
+          "$apksigner_path" verify "$apk_path"
+
+          signer_block="$(unzip -Z1 "$apk_path" | sed -n '/^META-INF\/.*\.RSA$/p' | head -n 1)"
+          test -n "$signer_block"
+          unzip -p "$apk_path" "$signer_block" > "$RUNNER_TEMP/apk-signer.p7b"
+          openssl pkcs7 -inform DER -in "$RUNNER_TEMP/apk-signer.p7b" \
+            -print_certs -out "$RUNNER_TEMP/apk-signer.pem"
+          openssl x509 -in "$RUNNER_TEMP/apk-signer.pem" -outform DER \
+            -out "$RUNNER_TEMP/apk-signer.der"
+          keytool -exportcert \
             -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
-            -alias androiddebugkey | sha256sum | cut -d ' ' -f 1)"
-          test -n "$apk_fingerprint"
-          test "$apk_fingerprint" = "$key_fingerprint"
-          echo "Verified APK certificate SHA256: $apk_fingerprint"
+            -alias androiddebugkey \
+            -file "$RUNNER_TEMP/keystore-signer.der"
+          cmp "$RUNNER_TEMP/apk-signer.der" "$RUNNER_TEMP/keystore-signer.der"
+          sha256sum "$RUNNER_TEMP/apk-signer.der"
       - uses: actions/upload-artifact@v4
         with:
           name: mahalle-ustasi-debug-apk
