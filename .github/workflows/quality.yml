@@ -39,9 +39,23 @@ jobs:
       # Debug-only signing continuity: keeps test APK updates installable over
       # the previous GitHub Actions build. Production signing stays separate.
       - uses: actions/cache@v4
+        id: debug-signing-cache
         with:
           path: ~/.android/debug.keystore
           key: mahalle-debug-keystore-v1
+      - name: Prepare stable debug signing key
+        if: steps.debug-signing-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -noprompt \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Mahalle Ustasi Debug,O=Development,C=TR" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000
       - run: npm ci
       - run: npm run android:sync
       - run: chmod +x android/gradlew
