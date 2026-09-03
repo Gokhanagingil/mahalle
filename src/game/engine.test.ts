@@ -1,127 +1,104 @@
 import { describe, expect, it } from 'vitest'
 import { levels } from './levels'
 import {
-  connectedLandmarks,
   distance,
-  evaluateRoadLevel,
+  evaluateMission,
+  findSnapTarget,
+  initialMissionState,
   magnetizePath,
   pathHitsObstacle,
   pointToSegmentDistance,
+  positionHitsObstacle,
+  roadJunctions,
   roadLength,
   simplifyPath,
   smoothPath,
 } from './engine'
-import type { RoadLevel, RoadStroke } from './types'
+import type { MissionState, RoadStroke } from './types'
 
-const road = (id: string, points: Array<[number, number]>): RoadStroke => ({
-  id,
-  points: points.map(([x, y]) => ({ x, y })),
+const road = (id: string, points: Array<[number, number]>): RoadStroke => ({ id, points: points.map(([x, y]) => ({ x, y })) })
+const movedState = (levelIndex: number, positions: MissionState['positions'], roads: RoadStroke[] = []): MissionState => ({
+  ...initialMissionState(levels[levelIndex]), positions, roads, movedItemIds: Object.keys(positions),
 })
 
-describe('organic road engine', () => {
+describe('multi-tool neighbourhood engine', () => {
   it('measures ordinary and segment distance correctly', () => {
     expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5)
     expect(pointToSegmentDistance({ x: 5, y: 4 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toBe(4)
   })
 
-  it('removes hand jitter without changing the endpoints', () => {
+  it('removes hand jitter without changing endpoints', () => {
     const points = Array.from({ length: 20 }, (_, index) => ({ x: index, y: index % 2 ? .12 : -.12 }))
-    const simplified = simplifyPath(points, .4)
-    expect(simplified).toEqual([points[0], points.at(-1)])
+    expect(simplifyPath(points, .4)).toEqual([points[0], points.at(-1)])
   })
 
-  it('creates a smooth SVG route from a player stroke', () => {
+  it('creates a smooth SVG route', () => {
     expect(smoothPath([{ x: 1, y: 2 }, { x: 5, y: 8 }, { x: 9, y: 3 }])).toContain('Q 5 8')
   })
 
-  it('magnetically snaps both ends to nearby landmarks', () => {
-    const level = levels[0]
-    const result = magnetizePath([{ x: 22, y: 29 }, { x: 48, y: 55 }, { x: 79, y: 86 }], level.landmarks, [])
-    expect(result[0]).toEqual(level.landmarks[0].position)
-    expect(result.at(-1)).toEqual(level.landmarks[1].position)
+  it('uses a generous magnetic field around places', () => {
+    const anchors = levels[0].landmarks
+    const target = findSnapTarget({ x: 35, y: 31 }, anchors, [])
+    expect(target?.id).toBe('bakery')
+    const result = magnetizePath([{ x: 35, y: 31 }, { x: 51, y: 60 }, { x: 68, y: 83 }], anchors, [])
+    expect(result[0]).toEqual(anchors[0].position)
+    expect(result.at(-1)).toEqual(anchors[1].position)
   })
 
-  it('magnetically snaps a branch to an existing road', () => {
+  it('pulls a new branch onto an existing street', () => {
     const base = road('base', [[10, 50], [90, 50]])
-    const result = magnetizePath([{ x: 48, y: 54 }, { x: 50, y: 20 }], [], [base])
-    expect(result[0]).toEqual({ x: 48, y: 50 })
+    const target = findSnapTarget({ x: 47, y: 58 }, [], [base])
+    expect(target).toMatchObject({ kind: 'road', id: 'base', point: { x: 47, y: 50 } })
   })
 
-  it('rejects routes that cut through protected landscape', () => {
-    const level = levels[2]
-    expect(pathHitsObstacle([{ x: 20, y: 47 }, { x: 80, y: 47 }], level)).toBe(true)
-    expect(pathHitsObstacle([{ x: 10, y: 15 }, { x: 90, y: 15 }], level)).toBe(false)
+  it('turns crossing and T-shaped streets into visible junctions', () => {
+    const cross = roadJunctions([road('horizontal', [[5, 50], [95, 50]]), road('vertical', [[50, 5], [50, 95]])])
+    const tee = roadJunctions([road('main', [[5, 50], [95, 50]]), road('branch', [[30, 20], [30, 50]])])
+    expect(cross[0]).toEqual({ x: 50, y: 50 })
+    expect(tee[0]).toEqual({ x: 30, y: 50 })
   })
 
-  it('completes the first level with a freehand road', () => {
-    const level = levels[0]
-    const result = evaluateRoadLevel(level, [road('fresh-bread', [[24, 28], [48, 52], [76, 88]])])
+  it('protects natural areas from roads and objects', () => {
+    expect(pathHitsObstacle([{ x: 20, y: 67 }, { x: 80, y: 67 }], levels[1])).toBe(true)
+    expect(positionHitsObstacle({ x: 49, y: 67 }, levels[1])).toBe(true)
+    expect(positionHitsObstacle({ x: 50, y: 35 }, levels[1])).toBe(false)
+  })
+
+  it('completes the road-drawing tutorial', () => {
+    const state = { ...initialMissionState(levels[0]), roads: [road('street', [[23, 27], [77, 91]])] }
+    expect(evaluateMission(levels[0], state).complete).toBe(true)
+  })
+
+  it('evaluates the bus-stop coverage puzzle', () => {
+    const state = movedState(1, { stop: { x: 50, y: 35 } })
+    const result = evaluateMission(levels[1], state)
+    expect(result.requirements.every((item) => item.satisfied)).toBe(true)
     expect(result.complete).toBe(true)
-    expect(result.connectedCount).toBe(1)
-    expect(result.requiredCount).toBe(1)
+  })
+
+  it('evaluates the park arrangement puzzle', () => {
+    const state = movedState(2, { bench: { x: 26, y: 48 }, lamp: { x: 27, y: 66 }, flowers: { x: 40, y: 68 } })
+    expect(evaluateMission(levels[2], state).complete).toBe(true)
+  })
+
+  it('evaluates the market layout puzzle', () => {
+    const state = movedState(3, { 'stall-a': { x: 18, y: 64 }, 'stall-b': { x: 47, y: 65 }, 'stall-c': { x: 72, y: 62 } })
+    expect(evaluateMission(levels[3], state).complete).toBe(true)
+  })
+
+  it('evaluates the mixed placement and road mission', () => {
+    const state = movedState(4, { clinic: { x: 50, y: 25 } }, [
+      road('south', [[10, 108], [83, 96]]), road('north', [[83, 96], [50, 25]]),
+    ])
+    const result = evaluateMission(levels[4], state)
+    expect(result.withinBudget).toBe(true)
+    expect(result.complete).toBe(true)
     expect(result.efficient).toBe(true)
   })
 
-  it('turns crossing strokes into a working intersection', () => {
-    const level: RoadLevel = {
-      id: 99,
-      name: { tr: 'Test', en: 'Test' }, intro: { tr: 'Test', en: 'Test' }, objective: { tr: 'Test', en: 'Test' },
-      landmarks: [
-        { id: 'west', type: 'home', position: { x: 5, y: 50 }, label: { tr: 'Batı', en: 'West' } },
-        { id: 'east', type: 'home', position: { x: 95, y: 50 }, label: { tr: 'Doğu', en: 'East' } },
-        { id: 'north', type: 'clinic', position: { x: 50, y: 5 }, label: { tr: 'Kuzey', en: 'North' } },
-      ],
-      obstacles: [], goal: { kind: 'connectAll', landmarkIds: ['west', 'east', 'north'] }, efficientLength: 200,
-    }
-    const roads = [road('horizontal', [[5, 50], [95, 50]]), road('vertical', [[50, 5], [50, 95]])]
-    expect(connectedLandmarks(level, roads, 'west')).toEqual(['west', 'east', 'north'])
-    expect(evaluateRoadLevel(level, roads).complete).toBe(true)
-  })
-
-  it('counts only homes reached from the bus stop in coverage goals', () => {
-    const level = levels[3]
-    const roads = [
-      road('one', [[51, 107], [15, 22]]),
-      road('two', [[51, 107], [51, 18]]),
-    ]
-    const result = evaluateRoadLevel(level, roads)
-    expect(result.connectedCount).toBe(2)
-    expect(result.requiredCount).toBe(3)
-    expect(result.complete).toBe(false)
-  })
-
-  it('uses total road length to recognise an efficient plan', () => {
+  it('recognises road allowance and exact polyline length', () => {
     expect(roadLength(road('right-angle', [[0, 0], [3, 0], [3, 4]]))).toBe(7)
-  })
-
-  it('asks for a shorter plan when the network exceeds its road allowance', () => {
-    const level = levels[1]
-    const separateLongRoads = [
-      road('first', [[12, 106], [37, 26]]),
-      road('second', [[12, 106], [83, 52]]),
-    ]
-    const result = evaluateRoadLevel(level, separateLongRoads)
-    expect(result.networkComplete).toBe(true)
-    expect(result.withinBudget).toBe(false)
-    expect(result.complete).toBe(false)
-  })
-
-  it('keeps every published level solvable around its protected areas and within budget', () => {
-    const plans: RoadStroke[][] = [
-      [road('l1', [[24, 28], [76, 88]])],
-      [road('l2-a', [[12, 106], [37, 26]]), road('l2-b', [[37, 26], [83, 52]])],
-      [road('l3-a', [[79, 22], [17, 29]]), road('l3-b', [[17, 29], [25, 103]])],
-      [road('l4-a', [[51, 107], [51, 18]]), road('l4-b', [[51, 18], [15, 22]]), road('l4-c', [[51, 18], [85, 42]])],
-      [
-        road('l5-a', [[9, 108], [25, 74]]),
-        road('l5-b', [[25, 74], [21, 24]]),
-        road('l5-c', [[21, 24], [80, 22]]),
-        road('l5-d', [[80, 22], [81, 93]]),
-      ],
-    ]
-    levels.forEach((level, index) => {
-      expect(plans[index].every((candidate) => !pathHitsObstacle(candidate.points, level))).toBe(true)
-      expect(evaluateRoadLevel(level, plans[index]).complete).toBe(true)
-    })
+    const state = movedState(4, { clinic: { x: 50, y: 25 } }, [road('too-long', [[10, 108], [97, 4], [83, 96], [50, 25]])])
+    expect(evaluateMission(levels[4], state).withinBudget).toBe(false)
   })
 })

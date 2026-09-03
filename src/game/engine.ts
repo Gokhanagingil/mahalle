@@ -1,4 +1,7 @@
-import type { Landmark, Point, RoadEvaluation, RoadLevel, RoadStroke } from './types'
+import type { MissionEvaluation, MissionLevel, MissionState, Point, RoadStroke } from './types'
+
+export type Anchor = { id: string; position: Point }
+export type SnapTarget = { id: string; kind: 'anchor' | 'road'; point: Point; distance: number }
 
 export const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y)
 
@@ -10,21 +13,25 @@ export function pointToSegmentDistance(point: Point, start: Point, end: Point): 
   return distance(point, { x: start.x + t * dx, y: start.y + t * dy })
 }
 
+function closestPointOnSegment(point: Point, start: Point, end: Point): Point {
+  const dx = end.x - start.x
+  const dy = end.y - start.y
+  const denominator = dx * dx + dy * dy || 1
+  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / denominator))
+  return { x: start.x + t * dx, y: start.y + t * dy }
+}
+
 export function pointToRoadDistance(point: Point, road: RoadStroke): number {
   if (road.points.length === 1) return distance(point, road.points[0])
   return Math.min(...road.points.slice(1).map((end, index) => pointToSegmentDistance(point, road.points[index], end)))
 }
 
-function perpendicularDistance(point: Point, start: Point, end: Point) {
-  return pointToSegmentDistance(point, start, end)
-}
-
-export function simplifyPath(points: Point[], tolerance = 0.7): Point[] {
+export function simplifyPath(points: Point[], tolerance = 0.85): Point[] {
   if (points.length <= 2) return points
   let greatest = 0
   let splitAt = 0
   for (let index = 1; index < points.length - 1; index += 1) {
-    const deviation = perpendicularDistance(points[index], points[0], points.at(-1)!)
+    const deviation = pointToSegmentDistance(points[index], points[0], points.at(-1)!)
     if (deviation > greatest) {
       greatest = deviation
       splitAt = index
@@ -46,53 +53,60 @@ export function smoothPath(points: Point[]): string {
     path += ` Q ${points[index].x} ${points[index].y} ${midpoint.x} ${midpoint.y}`
   }
   const last = points.at(-1)!
-  path += ` L ${last.x} ${last.y}`
-  return path
+  return `${path} L ${last.x} ${last.y}`
 }
 
 export function roadLength(road: RoadStroke): number {
   return road.points.slice(1).reduce((total, point, index) => total + distance(road.points[index], point), 0)
 }
 
-function nearestRoadPoint(point: Point, roads: RoadStroke[]): Point | null {
-  let best: { point: Point; distance: number } | null = null
-  for (const road of roads) {
-    for (let index = 1; index < road.points.length; index += 1) {
-      const start = road.points[index - 1]
-      const end = road.points[index]
-      const dx = end.x - start.x
-      const dy = end.y - start.y
-      const denominator = dx * dx + dy * dy || 1
-      const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / denominator))
-      const candidate = { x: start.x + t * dx, y: start.y + t * dy }
-      const gap = distance(point, candidate)
-      if (!best || gap < best.distance) best = { point: candidate, distance: gap }
-    }
-  }
-  return best && best.distance <= 6 ? best.point : null
-}
-
-function snapPoint(point: Point, landmarks: Landmark[], roads: RoadStroke[]): Point {
-  const landmark = landmarks
-    .map((item) => ({ point: item.position, distance: distance(point, item.position) }))
+export function findSnapTarget(point: Point, anchors: Anchor[], roads: RoadStroke[]): SnapTarget | null {
+  const anchor = anchors
+    .map((item) => ({ id: item.id, kind: 'anchor' as const, point: item.position, distance: distance(point, item.position) }))
+    .filter((candidate) => candidate.distance <= 17)
     .sort((a, b) => a.distance - b.distance)[0]
-  if (landmark && landmark.distance <= 13) return { ...landmark.point }
-  return nearestRoadPoint(point, roads) ?? point
+  if (anchor) return anchor
+
+  let roadTarget: SnapTarget | null = null
+  roads.forEach((road) => road.points.slice(1).forEach((end, index) => {
+    const candidate = closestPointOnSegment(point, road.points[index], end)
+    const gap = distance(point, candidate)
+    if (gap <= 10 && (!roadTarget || gap < roadTarget.distance)) {
+      roadTarget = { id: road.id, kind: 'road', point: candidate, distance: gap }
+    }
+  }))
+  return roadTarget
 }
 
-export function magnetizePath(points: Point[], landmarks: Landmark[], roads: RoadStroke[]): Point[] {
+export function magnetizePath(points: Point[], anchors: Anchor[], roads: RoadStroke[]): Point[] {
   const simple = simplifyPath(points)
   if (simple.length < 2) return simple
-  return simple.map((point, index) => {
-    if (index === 0 || index === simple.length - 1) return snapPoint(point, landmarks, roads)
-    return point
-  })
+  const startTarget = findSnapTarget(simple[0], anchors, roads)
+  const endTarget = findSnapTarget(simple.at(-1)!, anchors, roads)
+  const result = simple.map((point) => ({ ...point }))
+  if (startTarget) result[0] = { ...startTarget.point }
+  if (endTarget) {
+    const rawEnd = result.at(-1)!
+    if (distance(rawEnd, endTarget.point) > 2.2 && result.length > 2) {
+      const before = result[result.length - 2]
+      result[result.length - 2] = {
+        x: before.x * .72 + endTarget.point.x * .28,
+        y: before.y * .72 + endTarget.point.y * .28,
+      }
+    }
+    result[result.length - 1] = { ...endTarget.point }
+  }
+  return result
 }
 
-export function pathHitsObstacle(points: Point[], level: RoadLevel): boolean {
+export function pathHitsObstacle(points: Point[], level: MissionLevel): boolean {
   return level.obstacles.some((obstacle) => points.slice(1).some((end, index) => (
     pointToSegmentDistance(obstacle.position, points[index], end) < obstacle.radius + 2.8
   )))
+}
+
+export function positionHitsObstacle(point: Point, level: MissionLevel, clearance = 7): boolean {
+  return level.obstacles.some((obstacle) => distance(point, obstacle.position) < obstacle.radius + clearance)
 }
 
 function orientation(a: Point, b: Point, c: Point) {
@@ -110,80 +124,137 @@ function segmentsCross(a: Point, b: Point, c: Point, d: Point) {
 function segmentGap(a: Point, b: Point, c: Point, d: Point) {
   if (segmentsCross(a, b, c, d)) return 0
   return Math.min(
-    pointToSegmentDistance(a, c, d),
-    pointToSegmentDistance(b, c, d),
-    pointToSegmentDistance(c, a, b),
-    pointToSegmentDistance(d, a, b),
+    pointToSegmentDistance(a, c, d), pointToSegmentDistance(b, c, d),
+    pointToSegmentDistance(c, a, b), pointToSegmentDistance(d, a, b),
   )
 }
 
-function roadsTouch(a: RoadStroke, b: RoadStroke, threshold = 3.4): boolean {
+function roadsTouch(a: RoadStroke, b: RoadStroke, threshold = 3.8): boolean {
   return a.points.slice(1).some((aEnd, aIndex) => (
     b.points.slice(1).some((bEnd, bIndex) => segmentGap(a.points[aIndex], aEnd, b.points[bIndex], bEnd) <= threshold)
   ))
 }
 
-export function connectedLandmarks(level: RoadLevel, roads: RoadStroke[], originId: string): string[] {
-  const landmarkIds = level.landmarks.map((landmark) => landmark.id)
+function lineIntersection(a: Point, b: Point, c: Point, d: Point): Point | null {
+  const denominator = (a.x - b.x) * (c.y - d.y) - (a.y - b.y) * (c.x - d.x)
+  if (Math.abs(denominator) < .001 || !segmentsCross(a, b, c, d)) return null
+  const determinantA = a.x * b.y - a.y * b.x
+  const determinantB = c.x * d.y - c.y * d.x
+  return {
+    x: (determinantA * (c.x - d.x) - (a.x - b.x) * determinantB) / denominator,
+    y: (determinantA * (c.y - d.y) - (a.y - b.y) * determinantB) / denominator,
+  }
+}
+
+export function roadJunctions(roads: RoadStroke[]): Point[] {
+  const junctions: Point[] = []
+  const add = (point: Point) => {
+    if (!junctions.some((existing) => distance(existing, point) < 2)) junctions.push(point)
+  }
+  roads.forEach((road, roadIndex) => roads.slice(roadIndex + 1).forEach((other) => {
+    road.points.slice(1).forEach((end, index) => other.points.slice(1).forEach((otherEnd, otherIndex) => {
+      const start = road.points[index]
+      const otherStart = other.points[otherIndex]
+      const crossing = lineIntersection(start, end, otherStart, otherEnd)
+      if (crossing) add(crossing)
+      ;[start, end].forEach((endpoint) => {
+        if (pointToSegmentDistance(endpoint, otherStart, otherEnd) < .8) add(closestPointOnSegment(endpoint, otherStart, otherEnd))
+      })
+      ;[otherStart, otherEnd].forEach((endpoint) => {
+        if (pointToSegmentDistance(endpoint, start, end) < .8) add(closestPointOnSegment(endpoint, start, end))
+      })
+    }))
+  }))
+  return junctions
+}
+
+export function connectedAnchors(anchors: Anchor[], roads: RoadStroke[], originId: string): string[] {
+  const anchorIds = anchors.map((anchor) => anchor.id)
   const roadIds = roads.map((road) => road.id)
-  const adjacency = new Map<string, Set<string>>([...landmarkIds, ...roadIds].map((id) => [id, new Set<string>()]))
+  const adjacency = new Map<string, Set<string>>([...anchorIds, ...roadIds].map((id) => [id, new Set<string>()]))
   const link = (a: string, b: string) => {
     adjacency.get(a)?.add(b)
     adjacency.get(b)?.add(a)
   }
-
-  level.landmarks.forEach((landmark) => roads.forEach((road) => {
-    if (pointToRoadDistance(landmark.position, road) <= 6.8) link(landmark.id, road.id)
+  anchors.forEach((anchor) => roads.forEach((road) => {
+    if (pointToRoadDistance(anchor.position, road) <= 7.2) link(anchor.id, road.id)
   }))
   roads.forEach((road, index) => roads.slice(index + 1).forEach((other) => {
     if (roadsTouch(road, other)) link(road.id, other.id)
   }))
-
   const visited = new Set<string>()
   const queue = [originId]
   while (queue.length) {
     const current = queue.shift()!
     if (visited.has(current)) continue
     visited.add(current)
-    adjacency.get(current)?.forEach((next) => {
-      if (!visited.has(next)) queue.push(next)
-    })
+    adjacency.get(current)?.forEach((next) => { if (!visited.has(next)) queue.push(next) })
   }
-  return landmarkIds.filter((id) => visited.has(id))
+  return anchorIds.filter((id) => visited.has(id))
 }
 
-export function evaluateRoadLevel(level: RoadLevel, roads: RoadStroke[]): RoadEvaluation {
-  const totalLength = roads.reduce((sum, road) => sum + roadLength(road), 0)
-  if (level.goal.kind === 'coverage') {
-    const connected = connectedLandmarks(level, roads, level.goal.sourceId)
-    const connectedTargets = level.goal.targetIds.filter((id) => connected.includes(id))
-    const networkComplete = connectedTargets.length >= level.goal.count
-    const withinBudget = !level.roadBudget || totalLength <= level.roadBudget
-    return {
-      complete: networkComplete && withinBudget,
-      networkComplete,
-      withinBudget,
-      connectedLandmarkIds: connected,
-      connectedCount: connectedTargets.length,
-      requiredCount: level.goal.count,
-      totalLength,
-      efficient: networkComplete && totalLength <= level.efficientLength,
-    }
+export function initialMissionState(level: MissionLevel): MissionState {
+  return {
+    roads: [],
+    positions: Object.fromEntries(level.placeables.map((item) => [item.id, { ...item.position }])),
+    movedItemIds: [],
   }
+}
 
-  const connected = connectedLandmarks(level, roads, level.goal.landmarkIds[0])
-  const targets = level.goal.landmarkIds.slice(1)
-  const reached = targets.filter((id) => connected.includes(id))
-  const networkComplete = reached.length === targets.length
+export function evaluateMission(level: MissionLevel, state: MissionState): MissionEvaluation {
+  const positions = new Map<string, Point>([
+    ...level.landmarks.map((item) => [item.id, item.position] as const),
+    ...level.placeables.map((item) => [item.id, state.positions[item.id] ?? item.position] as const),
+  ])
+  const anchors = [...positions].map(([id, position]) => ({ id, position }))
+  const roads = [...(level.baseRoads ?? []), ...state.roads]
+  const connected = new Set<string>()
+
+  const requirements = level.requirements.map((requirement) => {
+    let satisfied = false
+    let progress: number | undefined
+    let target: number | undefined
+    if (requirement.kind === 'moved') {
+      progress = requirement.itemIds.filter((id) => state.movedItemIds.includes(id)).length
+      target = requirement.itemIds.length
+      satisfied = progress === target
+    } else if (requirement.kind === 'connect') {
+      const reached = connectedAnchors(anchors, roads, requirement.anchorIds[0])
+      reached.forEach((id) => connected.add(id))
+      progress = requirement.anchorIds.slice(1).filter((id) => reached.includes(id)).length
+      target = requirement.anchorIds.length - 1
+      satisfied = progress === target
+    } else if (requirement.kind === 'coverage') {
+      const source = positions.get(requirement.itemId)!
+      progress = requirement.targetIds.filter((id) => distance(source, positions.get(id)!) <= requirement.radius).length
+      target = requirement.count
+      satisfied = progress >= target
+    } else if (requirement.kind === 'nearObstacle') {
+      const point = positions.get(requirement.itemId)!
+      const obstacle = level.obstacles.find((item) => item.id === requirement.obstacleId)!
+      const gap = distance(point, obstacle.position)
+      satisfied = (requirement.min === undefined || gap >= requirement.min) && (requirement.max === undefined || gap <= requirement.max)
+    } else if (requirement.kind === 'nearItem') {
+      satisfied = distance(positions.get(requirement.itemId)!, positions.get(requirement.targetItemId)!) <= requirement.max
+    } else if (requirement.kind === 'separated') {
+      satisfied = requirement.itemIds.every((id, index) => requirement.itemIds.slice(index + 1).every((other) => distance(positions.get(id)!, positions.get(other)!) >= requirement.min))
+    } else if (requirement.kind === 'nearRoad') {
+      satisfied = requirement.itemIds.every((id) => roads.some((road) => pointToRoadDistance(positions.get(id)!, road) <= requirement.max))
+    } else if (requirement.kind === 'awayFromLandmark') {
+      const landmark = positions.get(requirement.landmarkId)!
+      satisfied = requirement.itemIds.every((id) => distance(positions.get(id)!, landmark) >= requirement.min)
+    }
+    return { id: requirement.id, satisfied, progress, target }
+  })
+
+  const totalLength = state.roads.reduce((sum, road) => sum + roadLength(road), 0)
   const withinBudget = !level.roadBudget || totalLength <= level.roadBudget
   return {
-    complete: networkComplete && withinBudget,
-    networkComplete,
-    withinBudget,
-    connectedLandmarkIds: connected,
-    connectedCount: reached.length,
-    requiredCount: targets.length,
+    complete: requirements.every((result) => result.satisfied) && withinBudget,
+    requirements,
+    connectedAnchorIds: [...connected],
     totalLength,
-    efficient: networkComplete && totalLength <= level.efficientLength,
+    withinBudget,
+    efficient: requirements.every((result) => result.satisfied) && (!level.efficientLength || totalLength <= level.efficientLength),
   }
 }

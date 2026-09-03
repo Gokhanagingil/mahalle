@@ -4,8 +4,9 @@ import { HomeScreen } from './screens/HomeScreen'
 import { LevelsScreen } from './screens/LevelsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { levels } from './game/levels'
+import { initialMissionState } from './game/engine'
 import { defaultGame, loadGame, resetGame, saveGame } from './game/storage'
-import type { RoadStroke, SavedGame, Settings } from './game/types'
+import type { MissionState, SavedGame, Settings } from './game/types'
 import { t } from './i18n'
 
 type Screen = 'home' | 'game' | 'levels' | 'settings'
@@ -31,15 +32,15 @@ export function App() {
     setScreen('game')
   }
 
-  function saveRoads(roads: RoadStroke[]) {
+  function saveMission(mission: MissionState) {
     setGame((previous) => ({
       ...previous,
       hasStarted: true,
-      roadNetworks: { ...previous.roadNetworks, [previous.currentLevel]: roads },
+      missions: { ...previous.missions, [previous.currentLevel]: mission },
     }))
   }
 
-  function completeLevel(roads: RoadStroke[]) {
+  function completeLevel(mission: MissionState) {
     setGame((previous) => {
       const levelId = levels[previous.currentLevel].id
       return {
@@ -47,7 +48,7 @@ export function App() {
         completedLevels: previous.completedLevels.includes(levelId)
           ? previous.completedLevels
           : [...previous.completedLevels, levelId],
-        roadNetworks: { ...previous.roadNetworks, [previous.currentLevel]: roads },
+        missions: { ...previous.missions, [previous.currentLevel]: mission },
       }
     })
   }
@@ -74,7 +75,7 @@ export function App() {
   }
 
   const level = levels[game.currentLevel] ?? levels[0]
-  const initialRoads = game.roadNetworks[game.currentLevel] ?? []
+  const initialMission = game.missions[game.currentLevel] ?? initialMissionState(level)
 
   return (
     <div className={classNames}>
@@ -106,8 +107,8 @@ export function App() {
           level={level}
           locale={game.settings.locale}
           settings={game.settings}
-          initialRoads={initialRoads}
-          onSave={saveRoads}
+          initialMission={initialMission}
+          onSave={saveMission}
           onComplete={completeLevel}
           onNext={nextLevel}
           onHome={() => setScreen('home')}

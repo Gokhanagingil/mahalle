@@ -1,15 +1,23 @@
 export type Locale = 'tr' | 'en'
-
 export type Point = { x: number; y: number }
+export type LocalizedText = { tr: string; en: string }
 
 export type LandmarkType = 'home' | 'bakery' | 'clinic' | 'busStop' | 'entrance' | 'park'
+export type PlaceableType = 'busStop' | 'clinic' | 'bench' | 'lamp' | 'flowerBed' | 'marketStall'
+export type MapObjectType = LandmarkType | PlaceableType | 'road' | 'pharmacy' | 'square'
 export type ObstacleType = 'tree' | 'pond' | 'garden'
-
-export type LocalizedText = { tr: string; en: string }
+export type ToolKind = 'road' | 'move'
 
 export type Landmark = {
   id: string
   type: LandmarkType
+  position: Point
+  label: LocalizedText
+}
+
+export type Placeable = {
+  id: string
+  type: PlaceableType
   position: Point
   label: LocalizedText
 }
@@ -22,37 +30,50 @@ export type Obstacle = {
   label: LocalizedText
 }
 
-export type RoadStroke = {
-  id: string
-  points: Point[]
-}
+export type RoadStroke = { id: string; points: Point[] }
 
-export type ConnectionGoal =
-  | { kind: 'connectAll'; landmarkIds: string[] }
-  | { kind: 'coverage'; sourceId: string; targetIds: string[]; count: number }
+type RequirementBase = { id: string; text: LocalizedText }
+export type Requirement =
+  | RequirementBase & { kind: 'connect'; anchorIds: string[] }
+  | RequirementBase & { kind: 'coverage'; itemId: string; targetIds: string[]; radius: number; count: number }
+  | RequirementBase & { kind: 'nearObstacle'; itemId: string; obstacleId: string; min?: number; max?: number }
+  | RequirementBase & { kind: 'nearItem'; itemId: string; targetItemId: string; max: number }
+  | RequirementBase & { kind: 'separated'; itemIds: string[]; min: number }
+  | RequirementBase & { kind: 'nearRoad'; itemIds: string[]; max: number }
+  | RequirementBase & { kind: 'awayFromLandmark'; itemIds: string[]; landmarkId: string; min: number }
+  | RequirementBase & { kind: 'moved'; itemIds: string[] }
 
-export type RoadLevel = {
+export type MissionLevel = {
   id: number
   name: LocalizedText
   intro: LocalizedText
   objective: LocalizedText
+  tools: ToolKind[]
   landmarks: Landmark[]
+  placeables: Placeable[]
   obstacles: Obstacle[]
-  goal: ConnectionGoal
+  baseRoads?: RoadStroke[]
+  requirements: Requirement[]
   roadBudget?: number
-  efficientLength: number
+  efficientLength?: number
   tutorialPath?: Point[]
+  serviceRadius?: { itemId: string; radius: number }
 }
 
-export type RoadEvaluation = {
+export type RequirementResult = { id: string; satisfied: boolean; progress?: number; target?: number }
+export type MissionEvaluation = {
   complete: boolean
-  networkComplete: boolean
-  withinBudget: boolean
-  connectedLandmarkIds: string[]
-  connectedCount: number
-  requiredCount: number
+  requirements: RequirementResult[]
+  connectedAnchorIds: string[]
   totalLength: number
+  withinBudget: boolean
   efficient: boolean
+}
+
+export type MissionState = {
+  roads: RoadStroke[]
+  positions: Record<string, Point>
+  movedItemIds: string[]
 }
 
 export type Settings = {
@@ -68,6 +89,6 @@ export type SavedGame = {
   hasStarted: boolean
   currentLevel: number
   completedLevels: number[]
-  roadNetworks: Record<number, RoadStroke[]>
+  missions: Record<number, MissionState>
   settings: Settings
 }

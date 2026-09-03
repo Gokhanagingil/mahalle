@@ -1,7 +1,7 @@
 {
   "name": "Mahalle Ustası",
   "short_name": "Mahalle",
-  "description": "Parmağınla yollar çizdiğin yaratıcı bir mahalle planlama oyunu.",
+  "description": "Yollar çizip ortak alanları düzenlediğin yaratıcı bir mahalle planlama oyunu.",
   "lang": "tr",
   "start_url": "./",
   "scope": "./",

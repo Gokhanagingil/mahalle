@@ -1,9 +1,7 @@
-import type { LandmarkType } from '../game/types'
-
-type ArtworkType = LandmarkType | 'road' | 'pharmacy' | 'square'
+import type { MapObjectType } from '../game/types'
 
 type Props = {
-  type: ArtworkType
+  type: MapObjectType
   decorative?: boolean
 }
 
@@ -104,6 +102,60 @@ export function BuildingArt({ type, decorative = false }: Props) {
         <path className="shelter" d="M20 38h43v8H20z" />
         <path className="glass" d="M24 46h35v26H24z" />
         <path className="bench" d="M29 62h26v6H29zm2 6h4v10h-4zm18 0h4v10h-4z" />
+      </svg>
+    )
+  }
+
+  if (type === 'bench') {
+    return (
+      <svg {...common} className="building-art building-bench">
+        <ellipse className="ground" cx="48" cy="79" rx="38" ry="9" />
+        <path className="wood" d="M17 44h62v12H17zm4 18h54v11H21z" />
+        <path className="metal" d="M23 55h6v28h-6zm44 0h6v28h-6zM14 72h68v6H14z" />
+        <path className="shine" d="M22 47h51v3H22z" />
+      </svg>
+    )
+  }
+
+  if (type === 'lamp') {
+    return (
+      <svg {...common} className="building-art building-lamp">
+        <ellipse className="ground" cx="48" cy="83" rx="25" ry="7" />
+        <path className="post" d="M44 31h8v50h-8z" />
+        <path className="base" d="M35 78h26v8H35z" />
+        <path className="cap" d="M31 23h34l-6 11H37z" />
+        <path className="light" d="M37 32h22v22H37z" />
+        <circle className="glow" cx="48" cy="43" r="22" />
+      </svg>
+    )
+  }
+
+  if (type === 'flowerBed') {
+    return (
+      <svg {...common} className="building-art building-flowerbed">
+        <ellipse className="soil" cx="48" cy="70" rx="39" ry="17" />
+        {[25, 42, 59, 75].map((x, index) => (
+          <g key={x} className={`flower flower-${index}`}>
+            <path className="stem" d={`M${x} 72V${42 + (index % 2) * 7}`} />
+            <circle className="petal" cx={x} cy={40 + (index % 2) * 7} r="8" />
+            <circle className="heart" cx={x} cy={40 + (index % 2) * 7} r="3" />
+          </g>
+        ))}
+      </svg>
+    )
+  }
+
+  if (type === 'marketStall') {
+    return (
+      <svg {...common} className="building-art building-stall">
+        <ellipse className="ground" cx="48" cy="82" rx="40" ry="8" />
+        <path className="counter" d="M17 54h62v25H17z" />
+        <path className="post" d="M18 31h6v49h-6zm54 0h6v49h-6z" />
+        <path className="awning" d="M12 27h72l-7 24H19z" />
+        <path className="stripe" d="M28 27h13l-2 24H25zm27 0h13l3 24H57z" />
+        <circle className="produce produce-a" cx="34" cy="62" r="5" />
+        <circle className="produce produce-b" cx="48" cy="64" r="5" />
+        <circle className="produce produce-c" cx="62" cy="61" r="5" />
       </svg>
     )
   }

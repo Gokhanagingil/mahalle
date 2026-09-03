@@ -289,6 +289,11 @@ button:focus-visible, input:focus-visible {
 .building-stop .ground { fill: rgba(48,72,57,.18); }.building-stop .post { fill: #515e5c; }.building-stop .sign { fill: #297eaa; }.building-stop .sign-mark { fill: white; }.building-stop .shelter { fill: #e96f45; }.building-stop .glass { fill: rgba(187,224,226,.8); stroke: white; stroke-width: 2; }.building-stop .bench { fill: #7f6048; }
 .building-square .ground { fill: #d2c19f; }.building-square .base { fill: #ded3bd; }.building-square .water { fill: #65b9cc; }.building-square .fountain { fill: #b4a78f; }.building-square .splash { fill: #7fc9d7; }
 .building-entrance .ground { fill: rgba(48,72,57,.18); }.building-entrance .post { fill: #f3d7a0; stroke: #a56844; stroke-width: 2; }.building-entrance .arch { fill: #c95e43; }.building-entrance .sign { fill: #f7e4b9; stroke: #9b5f3e; stroke-width: 2; }.building-entrance .sign-mark { fill: #16766d; }.building-entrance .flower { fill: #e96f78; }
+.building-bench .ground, .building-lamp .ground, .building-stall .ground { fill: rgba(41, 72, 53, .2); }
+.building-bench .wood { fill: #b36f43; stroke: #78472f; stroke-width: 2; }.building-bench .metal { fill: #405f5a; }.building-bench .shine { fill: rgba(255,255,255,.34); }
+.building-lamp .post, .building-lamp .base, .building-lamp .cap { fill: #3e5d59; }.building-lamp .light { fill: #ffe39a; stroke: #6e6447; stroke-width: 2; }.building-lamp .glow { fill: rgba(255, 220, 114, .2); animation: lamp-glow 2.4s ease-in-out infinite; }
+.building-flowerbed .soil { fill: #8a684a; stroke: #6f9b55; stroke-width: 5; }.building-flowerbed .stem { fill: none; stroke: #39784b; stroke-width: 3; }.building-flowerbed .petal { fill: #e86d76; }.building-flowerbed .flower-1 .petal { fill: #f0c44f; }.building-flowerbed .flower-2 .petal { fill: #9c72bc; }.building-flowerbed .flower-3 .petal { fill: #ec8652; }.building-flowerbed .heart { fill: #ffe49c; }
+.building-stall .counter { fill: #e8b96f; stroke: #8c6040; stroke-width: 2; }.building-stall .post { fill: #76513d; }.building-stall .awning { fill: #e4684c; }.building-stall .stripe { fill: #fff3d1; }.building-stall .produce-a { fill: #df5948; }.building-stall .produce-b { fill: #f2c14b; }.building-stall .produce-c { fill: #6ca559; }
 
 .inventory-panel { max-width: 620px; margin: 12px auto 0; padding: 13px; border-radius: 22px; background: rgba(255,253,247,.9); box-shadow: var(--soft-shadow); }
 .inventory-heading { margin-bottom: 9px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
@@ -445,6 +450,64 @@ button:focus-visible, input:focus-visible {
 .master-route-badge strong { font-family: 'Nunito', sans-serif; }
 .master-route-badge span { font-size: .78rem; line-height: 1.25; }
 
+/* Multi-tool mission layer */
+.mission-brief { max-width: 640px; margin: 0 auto 9px; padding: 10px; border: 1px solid rgba(36,60,56,.08); border-radius: 22px; background: rgba(255,253,247,.94); box-shadow: 0 7px 22px rgba(38,68,61,.1); }
+.mission-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.requirement-list { margin-top: 9px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.requirement-chip { min-height: 37px; padding: 6px 7px; display: grid; grid-template-columns: 23px 1fr auto; align-items: center; gap: 6px; border: 1px solid #e3e7df; border-radius: 12px; color: #5c6e68; background: #f7f6f0; transition: background .25s ease, color .25s ease, transform .25s ease; }
+.requirement-chip > span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: #e4e8e2; }
+.requirement-chip > span i { width: 8px; height: 8px; border: 2px solid #91a19b; border-radius: 50%; }
+.requirement-chip svg { width: 15px; stroke-width: 3; }
+.requirement-chip b { font-size: .73rem; line-height: 1.15; }
+.requirement-chip em { font-size: .69rem; font-style: normal; font-weight: 900; }
+.requirement-chip.satisfied { color: #155e55; border-color: #b9dfce; background: #e7f5ec; transform: translateY(-1px); }
+.requirement-chip.satisfied > span { color: white; background: var(--primary); animation: check-pop .35s ease; }
+
+.mission-tool-switch { position: relative; z-index: 3; max-width: 430px; min-height: 50px; margin: 0 auto 8px; padding: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border: 1px solid #d7e0d9; border-radius: 17px; background: #e9eee8; box-shadow: inset 0 1px 2px rgba(40,60,50,.08); }
+.mission-tool-switch button { min-height: 42px; border: 0; border-radius: 13px; color: #60716b; background: transparent; display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 900; cursor: pointer; }
+.mission-tool-switch button svg { width: 20px; }
+.mission-tool-switch button.active { color: white; background: var(--primary); box-shadow: 0 5px 11px rgba(22,118,109,.22); }
+
+.organic-map.tool-move .road-drawing-surface { cursor: default; }
+.organic-map.snap-active { box-shadow: 0 18px 38px rgba(47,78,58,.22), 0 0 0 5px rgba(244,201,93,.58); }
+.service-radius { fill: rgba(255,239,166,.14); stroke: rgba(213,155,46,.76); stroke-width: 1.1; stroke-dasharray: 2.5 2.5; animation: service-breathe 2.8s ease-in-out infinite; pointer-events: none; }
+.map-landmark.within-service .landmark-halo { opacity: 1; background: rgba(255,247,185,.78); box-shadow: 0 0 0 5px rgba(244,201,93,.38); animation: service-home 1.8s ease-in-out infinite; }
+
+.map-landmark.placeable { z-index: 5; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: grab; appearance: none; filter: drop-shadow(0 7px 4px rgba(37,65,48,.2)); transition: filter .15s ease; }
+.map-landmark.placeable:active { cursor: grabbing; }
+.map-landmark.placeable .building-art { pointer-events: none; }
+.map-landmark.placeable.is-selected { z-index: 7; filter: drop-shadow(0 10px 6px rgba(37,65,48,.25)) brightness(1.06); }
+.map-landmark.placeable.is-selected .building-art { animation: selected-float 1.35s ease-in-out infinite; }
+.drag-ring { position: absolute; z-index: -1; left: 50%; top: 56%; width: 76%; aspect-ratio: 1; border: 3px dashed rgba(22,118,109,.85); border-radius: 50%; opacity: 0; transform: translate(-50%,-50%) scale(.72); }
+.map-landmark.placeable.is-selected .drag-ring { opacity: 1; animation: drag-ring 1.8s linear infinite; }
+.drag-handle { position: absolute; z-index: 4; right: -1px; top: 2px; width: 27px; height: 27px; display: grid; place-items: center; border: 2px solid white; border-radius: 50%; color: white; background: var(--primary); box-shadow: 0 3px 8px rgba(34,74,61,.25); opacity: .92; }
+.drag-handle svg { width: 14px; stroke-width: 3; }
+.map-landmark.was-moved:not(.is-selected) .drag-handle { opacity: 0; }
+.map-landmark.landmark-bench { width: clamp(62px,19vw,82px); height: clamp(47px,15vw,65px); }
+.map-landmark.landmark-lamp { width: clamp(45px,14vw,62px); height: clamp(62px,19vw,82px); }
+.map-landmark.landmark-flowerBed { width: clamp(58px,18vw,78px); height: clamp(46px,14vw,62px); }
+.map-landmark.landmark-marketStall { width: clamp(59px,18vw,80px); height: clamp(55px,17vw,74px); }
+
+.fresh-road-line { animation: road-build .7s cubic-bezier(.2,.78,.2,1) both; }
+.road-junction > circle:first-child { fill: #777e79; stroke: #d9caaa; stroke-width: 1.5; }
+.road-junction .junction-heart { fill: #ffe28b; stroke: white; stroke-width: .55; }
+.road-junction .junction-wave { fill: none; stroke: #ffe28b; stroke-width: .8; opacity: 0; transform-box: fill-box; transform-origin: center; animation: junction-pop 1.05s ease-out 2; }
+.magnetic-catch { pointer-events: none; }
+.magnetic-catch path { fill: none; stroke: rgba(236,112,62,.92); stroke-width: 1.5; stroke-dasharray: 2 1.5; stroke-linecap: round; animation: magnet-line .55s ease-in-out infinite alternate; }
+.magnetic-catch circle { transform-box: fill-box; transform-origin: center; }
+.magnet-wave-one { fill: rgba(255,237,155,.25); stroke: #f2b84b; stroke-width: 1.25; animation: magnet-catch .7s cubic-bezier(.2,.8,.2,1) infinite alternate; }
+.magnet-wave-two { fill: none; stroke: rgba(233,111,69,.7); stroke-width: 1; animation: magnet-wave 1.1s ease-out infinite; }
+.magnet-core { fill: #fff8d9; stroke: #e96f45; stroke-width: 1.2; }
+.snap-toast { position: absolute; z-index: 9; left: 50%; bottom: 13px; min-height: 40px; padding: 8px 13px; display: flex; align-items: center; gap: 7px; border: 2px solid #e7ad3e; border-radius: 99px; color: #64430e; background: #fff3bb; box-shadow: 0 7px 18px rgba(93,67,20,.22); font-size: .82rem; font-weight: 900; transform: translateX(-50%); animation: snap-toast .25s ease both; white-space: nowrap; }
+.snap-toast svg { width: 18px; }
+.action-coach { position: absolute; z-index: 4; left: 50%; bottom: 13px; width: max-content; max-width: 88%; padding: 8px 13px; display: flex; align-items: center; gap: 9px; border-radius: 99px; color: #254c42; background: rgba(255,253,247,.91); box-shadow: 0 5px 15px rgba(40,70,58,.14); font-size: .8rem; transform: translateX(-50%); pointer-events: none; }
+.move-pulse { position: relative; width: 26px; height: 22px; border: 2px solid var(--primary); border-radius: 8px; }
+.move-pulse::before, .move-pulse::after { content: ''; position: absolute; width: 7px; height: 7px; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+.move-pulse::before { right: -8px; top: -6px; transform: rotate(-15deg); }.move-pulse::after { left: -8px; bottom: -6px; transform: rotate(165deg); }
+
+.app-shell.large-text .requirement-chip b { font-size: .83rem; }
+.app-shell.large-text .landmark-label { font-size: .72rem; padding: 4px 8px; }
+
 /* Modal and sheets */
 .modal-backdrop, .bottom-sheet-backdrop { position: fixed; z-index: 30; inset: 0; padding: 20px; display: grid; place-items: center; background: rgba(23,45,40,.56); backdrop-filter: blur(5px); animation: fade-in 180ms ease; }
 .pause-modal, .complete-modal { width: min(100%, 430px); padding: 30px 24px; border-radius: 30px; background: var(--paper); box-shadow: 0 30px 80px rgba(16,40,33,.28); text-align: center; animation: modal-arrive 300ms cubic-bezier(.2,.8,.2,1); }
@@ -488,6 +551,23 @@ button:focus-visible, input:focus-visible {
 @keyframes finger-guide { 50% { transform: translateX(11px) rotate(-12deg); opacity: .55; } }
 @keyframes notice-rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 @keyframes alive-blink { 50% { opacity: .55; transform: scale(.88); } }
+@keyframes lamp-glow { 50% { filter: drop-shadow(0 0 5px rgba(255, 215, 94, .78)); } }
+@keyframes service-breathe { 50% { fill: rgba(255,239,166,.22); stroke-dashoffset: 5; } }
+@keyframes service-home { 50% { transform: translateX(-50%) scale(1.08); box-shadow: 0 0 0 10px rgba(244,201,93,.13); } }
+@keyframes selected-float { 50% { transform: translateY(-3px) scale(1.03); } }
+@keyframes drag-ring { to { transform: translate(-50%,-50%) scale(.98) rotate(180deg); } }
+@keyframes junction-pop { 45% { opacity: .8; transform: scale(1.35); } to { opacity: 0; transform: scale(1.8); } }
+@keyframes magnet-line { to { stroke-dashoffset: -3.5; opacity: .58; } }
+@keyframes magnet-catch { to { transform: scale(1.28); fill: rgba(255,237,155,.52); } }
+@keyframes magnet-wave { from { opacity: .8; transform: scale(.55); } to { opacity: 0; transform: scale(1.45); } }
+@keyframes snap-toast { from { opacity: 0; transform: translate(-50%, 7px) scale(.94); } }
+
+@media (max-width: 420px) {
+  .requirement-list { grid-template-columns: 1fr; }
+  .requirement-chip { min-height: 38px; padding: 6px 9px; }
+  .requirement-chip b { font-size: .79rem; }
+  .mission-brief { border-radius: 18px; }
+}
 
 @media (max-height: 760px) {
   .game-screen { padding-top: 8px; }
@@ -504,6 +584,11 @@ button:focus-visible, input:focus-visible {
   .road-objective { min-height: 61px; padding-top: 7px; padding-bottom: 7px; margin-bottom: 7px; }
   .organic-map-wrap { max-width: 410px; }
   .road-status-row { min-height: 30px; }
+  .mission-brief { margin-bottom: 6px; padding: 7px 9px; }
+  .requirement-list { margin-top: 6px; gap: 4px; }
+  .requirement-chip { min-height: 32px; padding-top: 4px; padding-bottom: 4px; }
+  .mission-tool-switch { min-height: 44px; margin-bottom: 6px; }
+  .mission-tool-switch button { min-height: 36px; }
 }
 
 @media (min-width: 720px) {

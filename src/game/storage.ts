@@ -1,23 +1,14 @@
 import type { SavedGame, Settings } from './types'
 
-const STORAGE_KEY = 'mahalle-ustasi-save-v2'
-const LEGACY_KEY = 'mahalle-ustasi-save-v1'
+const STORAGE_KEY = 'mahalle-ustasi-save-v3'
+const LEGACY_KEYS = ['mahalle-ustasi-save-v2', 'mahalle-ustasi-save-v1']
 
 export const defaultSettings: Settings = {
-  locale: 'tr',
-  sound: true,
-  haptics: true,
-  highContrast: false,
-  largeText: false,
-  reducedMotion: false,
+  locale: 'tr', sound: true, haptics: true, highContrast: false, largeText: false, reducedMotion: false,
 }
 
 export const defaultGame: SavedGame = {
-  hasStarted: false,
-  currentLevel: 0,
-  completedLevels: [],
-  roadNetworks: {},
-  settings: defaultSettings,
+  hasStarted: false, currentLevel: 0, completedLevels: [], missions: {}, settings: defaultSettings,
 }
 
 export function loadGame(): SavedGame {
@@ -26,17 +17,19 @@ export function loadGame(): SavedGame {
     if (stored) {
       const parsed = JSON.parse(stored) as Partial<SavedGame>
       return {
-        ...defaultGame,
-        ...parsed,
+        ...defaultGame, ...parsed,
         settings: { ...defaultSettings, ...parsed.settings },
-        completedLevels: parsed.completedLevels ?? [],
-        roadNetworks: parsed.roadNetworks ?? {},
+        completedLevels: parsed.completedLevels ?? [], missions: parsed.missions ?? {},
       }
     }
-    const legacy = localStorage.getItem(LEGACY_KEY)
-    if (!legacy) return defaultGame
-    const parsedLegacy = JSON.parse(legacy) as { settings?: Partial<Settings> }
-    return { ...defaultGame, settings: { ...defaultSettings, ...parsedLegacy.settings } }
+    for (const key of LEGACY_KEYS) {
+      const legacy = localStorage.getItem(key)
+      if (legacy) {
+        const parsed = JSON.parse(legacy) as { settings?: Partial<Settings> }
+        return { ...defaultGame, settings: { ...defaultSettings, ...parsed.settings } }
+      }
+    }
+    return defaultGame
   } catch {
     return defaultGame
   }
@@ -48,5 +41,5 @@ export function saveGame(game: SavedGame) {
 
 export function resetGame() {
   localStorage.removeItem(STORAGE_KEY)
-  localStorage.removeItem(LEGACY_KEY)
+  LEGACY_KEYS.forEach((key) => localStorage.removeItem(key))
 }

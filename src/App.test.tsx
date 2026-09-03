@@ -36,6 +36,9 @@ describe('Mahalle Ustası shell', () => {
     Object.defineProperty(map, 'getBoundingClientRect', {
       value: () => ({ left: 0, top: 0, right: 100, bottom: 118, width: 100, height: 118, x: 0, y: 0, toJSON: () => ({}) }),
     })
+    Object.defineProperty(map.closest('.organic-map')!, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 100, bottom: 118, width: 100, height: 118, x: 0, y: 0, toJSON: () => ({}) }),
+    })
     Object.defineProperty(map, 'setPointerCapture', { value: () => undefined })
     Object.defineProperty(map, 'hasPointerCapture', { value: () => true })
     Object.defineProperty(map, 'releasePointerCapture', { value: () => undefined })
