@@ -1,207 +1,327 @@
 import { useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Check, HelpCircle, Lightbulb, LockKeyhole, Pause, Play, RotateCcw, Sparkles, Undo2, X } from 'lucide-react'
+import { ArrowLeft, Check, HelpCircle, Lightbulb, Pause, Play, RotateCcw, Route, Sparkles, Undo2, X } from 'lucide-react'
 import { BuildingArt } from '../components/BuildingArt'
-import { evaluateLevel, isLevelComplete, itemAt, placeItem } from '../game/engine'
-import type { BoardItem, BuildingType, Level, Locale, Position, Settings } from '../game/types'
-import { buildingName, ruleText, t } from '../i18n'
+import {
+  distance,
+  evaluateRoadLevel,
+  magnetizePath,
+  pathHitsObstacle,
+  pointToRoadDistance,
+  roadLength,
+  smoothPath,
+} from '../game/engine'
+import type { Locale, Point, RoadLevel, RoadStroke, Settings } from '../game/types'
+import { t } from '../i18n'
 import { placementFeedback, successFeedback } from '../utils/feedback'
 import { useWakeLock } from '../hooks/useWakeLock'
 
 type Props = {
-  level: Level
+  level: RoadLevel
   locale: Locale
   settings: Settings
-  initialItems: BoardItem[]
-  onSave: (items: BoardItem[]) => void
-  onComplete: (items: BoardItem[]) => void
+  initialRoads: RoadStroke[]
+  onSave: (roads: RoadStroke[]) => void
+  onComplete: (roads: RoadStroke[]) => void
   onNext: () => void
   onHome: () => void
 }
 
-function goodCellsFor(type: BuildingType, level: Level): Position[] {
-  const cells: Position[] = []
-  for (let row = 0; row < level.size; row += 1) {
-    for (let col = 0; col < level.size; col += 1) {
-      const target = { row, col }
-      if (itemAt(level.items, target)) continue
-      const item = level.items.find((candidate) => candidate.type === type && !candidate.fixed)
-      if (!item) continue
-      const testItems = placeItem(level.items, item.id, target)
-      const relevant = level.rules.filter((rule) => rule.subject === type)
-      if (relevant.length && relevant.every((rule) => evaluateLevel({ ...level, rules: [rule] }, testItems)[0].satisfied)) {
-        cells.push(target)
-      }
-    }
+type Notice = 'short' | 'obstacle' | 'budget' | null
+
+function hintFor(locale: Locale, levelId: number) {
+  if (levelId === 1) return t(locale, 'hintLevel1')
+  if (levelId === 2) return t(locale, 'hintBranch')
+  if (levelId === 3) return t(locale, 'hintObstacle')
+  return t(locale, 'hintNetwork')
+}
+
+function ObstacleArt({ type, x, y, radius }: { type: 'tree' | 'pond' | 'garden'; x: number; y: number; radius: number }) {
+  if (type === 'pond') {
+    return (
+      <g className="map-pond" aria-hidden="true">
+        <ellipse cx={x} cy={y + 1} rx={radius * 1.18} ry={radius * 0.72} />
+        <path d={`M ${x - radius * .62} ${y} q ${radius * .32} ${-radius * .3} ${radius * .66} 0 t ${radius * .66} 0`} />
+        <circle cx={x - radius * .45} cy={y - radius * .42} r="1.2" />
+        <path className="reed" d={`M ${x + radius * .6} ${y + radius * .35} q 0 -5 2 -7 M ${x + radius * .8} ${y + radius * .34} q -1 -4 -3 -6`} />
+      </g>
+    )
   }
-  return cells
+  if (type === 'garden') {
+    return (
+      <g className="map-garden" aria-hidden="true">
+        <ellipse className="garden-bed" cx={x} cy={y + 1} rx={radius * 1.12} ry={radius * .72} />
+        {[-.62, -.25, .14, .53].map((offset, index) => (
+          <g key={offset} transform={`translate(${x + radius * offset} ${y + (index % 2 ? 2 : -1)})`}>
+            <path d="M0 4V-1" />
+            <circle className={`flower flower-${index}`} cy="-2" r="2.1" />
+          </g>
+        ))}
+      </g>
+    )
+  }
+  return (
+    <g className="map-tree" aria-hidden="true">
+      <ellipse className="tree-shadow" cx={x + 1.5} cy={y + radius * .78} rx={radius * .73} ry={radius * .28} />
+      <path className="tree-trunk" d={`M ${x - 1.7} ${y + radius * .78} L ${x - .8} ${y - 1} L ${x + 2} ${y - 1} L ${x + 2.7} ${y + radius * .78} Z`} />
+      <circle className="tree-leaf leaf-one" cx={x - radius * .32} cy={y - radius * .28} r={radius * .62} />
+      <circle className="tree-leaf leaf-two" cx={x + radius * .34} cy={y - radius * .38} r={radius * .58} />
+      <circle className="tree-leaf leaf-three" cx={x + radius * .05} cy={y + radius * .1} r={radius * .61} />
+    </g>
+  )
 }
 
-function hintFor(locale: Locale, level: Level) {
-  const subject = level.rules[0]?.subject
-  if (subject === 'park') return t(locale, 'hintPark')
-  if (subject === 'bakery') return t(locale, 'hintBakery')
-  if (subject === 'pharmacy') return t(locale, 'hintPharmacy')
-  if (subject === 'busStop') return t(locale, 'hintStop')
-  return t(locale, 'hintGeneric')
-}
-
-export function GameScreen({ level, locale, settings, initialItems, onSave, onComplete, onNext, onHome }: Props) {
-  const [items, setItems] = useState<BoardItem[]>(initialItems)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [history, setHistory] = useState<BoardItem[][]>([])
+export function GameScreen({ level, locale, settings, initialRoads, onSave, onComplete, onNext, onHome }: Props) {
+  const [roads, setRoads] = useState<RoadStroke[]>(initialRoads)
+  const [history, setHistory] = useState<RoadStroke[][]>([])
+  const [drawing, setDrawing] = useState<Point[]>([])
+  const drawingRef = useRef<Point[]>([])
   const [paused, setPaused] = useState(false)
   const [hintOpen, setHintOpen] = useState(false)
-  const [complete, setComplete] = useState(() => isLevelComplete(level, initialItems))
-  const [showIntro, setShowIntro] = useState(true)
-  const completedOnce = useRef(isLevelComplete(level, initialItems))
+  const [showIntro, setShowIntro] = useState(initialRoads.length === 0)
+  const [notice, setNotice] = useState<Notice>(null)
+  const [freshRoadId, setFreshRoadId] = useState<string | null>(null)
+  const initialEvaluation = evaluateRoadLevel(level, initialRoads)
+  const [complete, setComplete] = useState(initialEvaluation.complete)
+  const completedOnce = useRef(initialEvaluation.complete)
+  const noticeTimer = useRef<number | undefined>(undefined)
 
   useWakeLock(!paused)
 
-  const results = useMemo(() => evaluateLevel(level, items), [level, items])
-  const selected = items.find((item) => item.id === selectedId)
-  const inventory = items.filter((item) => !item.fixed && !item.position)
-  const placedMovables = items.filter((item) => !item.fixed && item.position)
-  const highlightCells = useMemo(
-    () => (selected && (hintOpen || level.tutorial) ? goodCellsFor(selected.type, { ...level, items }) : []),
-    [hintOpen, items, level, selected],
+  const evaluation = useMemo(() => evaluateRoadLevel(level, roads), [level, roads])
+  const previewPoints = useMemo(
+    () => (drawing.length > 1 ? magnetizePath(drawing, level.landmarks, roads) : drawing),
+    [drawing, level.landmarks, roads],
   )
+  const previewHitsObstacle = previewPoints.length > 1 && pathHitsObstacle(previewPoints, level)
 
-  const tutorialMessage = useMemo(() => {
-    if (!level.tutorial || complete) return null
-    if (level.tutorial === 'firstPlacement') return selected ? t(locale, 'tutorialPlace') : t(locale, 'tutorialSelect')
-    return selected ? t(locale, 'tutorialDistancePlace') : t(locale, 'tutorialDistanceSelect')
-  }, [complete, level.tutorial, locale, selected])
+  function mapPoint(event: React.PointerEvent<SVGSVGElement>): Point {
+    const rect = event.currentTarget.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(0, Math.min(118, ((event.clientY - rect.top) / rect.height) * 118)),
+    }
+  }
 
-  function commit(next: BoardItem[]) {
-    setHistory((previous) => [...previous, items])
-    setItems(next)
+  function isAnchored(point: Point) {
+    return level.landmarks.some((landmark) => distance(point, landmark.position) <= 15)
+      || roads.some((road) => pointToRoadDistance(point, road) <= 7)
+  }
+
+  function showNotice(next: Notice) {
+    window.clearTimeout(noticeTimer.current)
+    setNotice(next)
+    noticeTimer.current = window.setTimeout(() => setNotice(null), 2500)
+  }
+
+  function beginRoad(event: React.PointerEvent<SVGSVGElement>) {
+    if (paused || complete) return
+    const point = mapPoint(event)
+    if (!isAnchored(point)) {
+      showNotice('short')
+      return
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    drawingRef.current = [point]
+    setDrawing([point])
+    setShowIntro(false)
+    setNotice(null)
+  }
+
+  function extendRoad(event: React.PointerEvent<SVGSVGElement>) {
+    if (!drawingRef.current.length || !event.currentTarget.hasPointerCapture(event.pointerId)) return
+    const point = mapPoint(event)
+    if (distance(point, drawingRef.current.at(-1)!) < 1.1) return
+    drawingRef.current = [...drawingRef.current, point]
+    setDrawing(drawingRef.current)
+  }
+
+  function finishRoad(event: React.PointerEvent<SVGSVGElement>) {
+    if (!drawingRef.current.length) return
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    const end = mapPoint(event)
+    const raw = distance(end, drawingRef.current.at(-1)!) > .5 ? [...drawingRef.current, end] : drawingRef.current
+    const points = magnetizePath(raw, level.landmarks, roads)
+    drawingRef.current = []
+    setDrawing([])
+
+    if (points.length < 2 || roadLength({ id: 'preview', points }) < 5 || !isAnchored(points.at(-1)!)) {
+      showNotice('short')
+      return
+    }
+    if (pathHitsObstacle(points, level)) {
+      showNotice('obstacle')
+      return
+    }
+
+    const road: RoadStroke = { id: `road-${Date.now()}-${roads.length}`, points }
+    const next = [...roads, road]
+    setHistory((previous) => [...previous, roads])
+    setRoads(next)
+    setFreshRoadId(road.id)
     onSave(next)
     placementFeedback(settings)
-    window.setTimeout(() => {
-      if (!completedOnce.current && isLevelComplete(level, next)) {
-        completedOnce.current = true
+
+    const nextEvaluation = evaluateRoadLevel(level, next)
+    if (nextEvaluation.networkComplete && !nextEvaluation.withinBudget) showNotice('budget')
+    if (!completedOnce.current && nextEvaluation.complete) {
+      completedOnce.current = true
+      window.setTimeout(() => {
         successFeedback(settings)
         onComplete(next)
         setComplete(true)
-      }
-    }, settings.reducedMotion ? 80 : 520)
-  }
-
-  function selectItem(item: BoardItem) {
-    if (item.fixed) return
-    setSelectedId(item.id === selectedId ? null : item.id)
-    setShowIntro(false)
-  }
-
-  function selectCell(position: Position) {
-    const cellItem = itemAt(items, position)
-    if (selectedId) {
-      if (cellItem?.fixed) return
-      const next = placeItem(items, selectedId, position)
-      if (next !== items) {
-        commit(next)
-        setSelectedId(null)
-        setHintOpen(false)
-      }
-      return
+      }, settings.reducedMotion ? 100 : 650)
     }
-    if (cellItem && !cellItem.fixed) selectItem(cellItem)
   }
 
   function undo() {
     const previous = history.at(-1)
     if (!previous) return
-    setItems(previous)
+    setRoads(previous)
     setHistory((entries) => entries.slice(0, -1))
-    setSelectedId(null)
     setComplete(false)
     completedOnce.current = false
     onSave(previous)
   }
 
   function restart() {
-    const fresh = level.items.map((item) => ({ ...item, position: item.position ? { ...item.position } : undefined }))
-    setHistory((previous) => [...previous, items])
-    setItems(fresh)
-    setSelectedId(null)
+    setHistory((previous) => [...previous, roads])
+    setRoads([])
+    setDrawing([])
+    drawingRef.current = []
     setComplete(false)
     completedOnce.current = false
     setPaused(false)
-    onSave(fresh)
+    setShowIntro(true)
+    onSave([])
   }
 
   return (
-    <main className="game-screen">
+    <main className="game-screen road-game">
       <header className="game-header">
         <button className="round-button" onClick={() => setPaused(true)} aria-label={t(locale, 'pause')}><Pause /></button>
         <div className="level-heading">
-          <small>{t(locale, 'level')} {level.id} / 5</small>
+          <small>{t(locale, 'level')} {level.id} / {5}</small>
           <strong>{level.name[locale]}</strong>
         </div>
         <div className="level-progress" aria-hidden="true"><i style={{ width: `${level.id * 20}%` }} /></div>
       </header>
 
-      <section className="goal-panel">
-        <div className="goal-title"><Sparkles aria-hidden="true" /><span>{t(locale, 'goals')}</span></div>
-        <div className="rules-list">
-          {level.rules.map((rule) => {
-            const satisfied = results.find((result) => result.ruleId === rule.id)?.satisfied
+      <section className="road-objective" aria-live="polite">
+        <div className="objective-copy">
+          <span className="objective-icon"><Route aria-hidden="true" /></span>
+          <div><small>{t(locale, 'goals')}</small><strong>{level.objective[locale]}</strong></div>
+        </div>
+        <div className="connection-meter" aria-label={`${evaluation.connectedCount} / ${evaluation.requiredCount} ${t(locale, 'connected')}`}>
+          <strong>{evaluation.connectedCount}/{evaluation.requiredCount}</strong>
+          <span>{t(locale, 'connected')}</span>
+        </div>
+      </section>
+
+      <section className="organic-map-wrap">
+        <div className={`organic-map ${drawing.length ? 'is-drawing' : ''}`}>
+          <svg
+            className="road-drawing-surface"
+            viewBox="0 0 100 118"
+            role="application"
+            aria-label={`${level.objective[locale]}. ${t(locale, 'drawCoach')}`}
+            onPointerDown={beginRoad}
+            onPointerMove={extendRoad}
+            onPointerUp={finishRoad}
+            onPointerCancel={finishRoad}
+          >
+            <defs>
+              <linearGradient id={`grass-${level.id}`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#dff0c7" />
+                <stop offset="1" stopColor="#b9dda6" />
+              </linearGradient>
+              <filter id={`road-shadow-${level.id}`} x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="1.2" stdDeviation="1" floodColor="#47634a" floodOpacity=".3" />
+              </filter>
+            </defs>
+
+            <rect width="100" height="118" rx="7" fill={`url(#grass-${level.id})`} />
+            <path className="terrain-patch patch-one" d="M-8 17C10 5 26 4 40 13s27 8 42-1 27-4 29 8v22c-20-7-28 1-42 4S42 34 27 39 7 42-35 32z" />
+            <path className="terrain-patch patch-two" d="M-4 86c18-11 31-7 45 1s31 6 43-3 23-4 25 10v25H-4z" />
+            <path className="meadow-line" d="M4 57c17-9 24 3 40 0s28-12 51-3" />
+            {[{ x: 8, y: 14 }, { x: 92, y: 13 }, { x: 9, y: 65 }, { x: 92, y: 105 }].map((plant) => (
+              <g key={`${plant.x}-${plant.y}`} className="tiny-plant" transform={`translate(${plant.x} ${plant.y})`} aria-hidden="true">
+                <path d="M0 4V0m0 2-2-2m2 1 2-2" />
+              </g>
+            ))}
+
+            {level.tutorialPath && roads.length === 0 && (
+              <path className="tutorial-route" d={smoothPath(level.tutorialPath)} />
+            )}
+
+            {roads.map((road, index) => {
+              const path = smoothPath(road.points)
+              return (
+                <g key={road.id} className={road.id === freshRoadId ? 'fresh-road' : ''} filter={`url(#road-shadow-${level.id})`}>
+                  <path className="road-verge" d={path} pathLength="1" />
+                  <path className="road-surface" d={path} pathLength="1" />
+                  <path className="road-centre" d={path} pathLength="1" />
+                  {!settings.reducedMotion && index < 3 && (
+                    <circle className={`street-life life-${index}`} r="1.25">
+                      <animateMotion dur={`${6 + index * 1.8}s`} repeatCount="indefinite" path={path} />
+                    </circle>
+                  )}
+                </g>
+              )
+            })}
+
+            {previewPoints.length > 1 && (
+              <g className={`road-preview-group ${previewHitsObstacle ? 'is-blocked' : ''}`}>
+                <path className="road-preview-verge" d={smoothPath(previewPoints)} />
+                <path className="road-preview" d={smoothPath(previewPoints)} />
+              </g>
+            )}
+
+            {level.obstacles.map((obstacle) => (
+              <ObstacleArt key={obstacle.id} type={obstacle.type} x={obstacle.position.x} y={obstacle.position.y} radius={obstacle.radius} />
+            ))}
+          </svg>
+
+          {level.landmarks.map((landmark, index) => {
+            const connected = evaluation.connectedLandmarkIds.includes(landmark.id) && roads.length > 0
             return (
-              <div key={rule.id} className={`rule-chip ${satisfied ? 'satisfied' : ''}`} role="status">
-                <span className="rule-status">{satisfied ? <Check /> : <i />}</span>
-                <span>{ruleText(locale, rule)}</span>
+              <div
+                key={landmark.id}
+                className={`map-landmark landmark-${landmark.type} ${connected ? 'is-connected' : ''}`}
+                style={{ left: `${landmark.position.x}%`, top: `${(landmark.position.y / 118) * 100}%`, '--landmark-delay': `${index * 90}ms` } as React.CSSProperties}
+                aria-label={`${landmark.label[locale]}${connected ? `, ${t(locale, 'connected')}` : ''}`}
+              >
+                <span className="landmark-halo" aria-hidden="true" />
+                <BuildingArt type={landmark.type} decorative />
+                <span className="landmark-label">{landmark.label[locale]}</span>
               </div>
             )
           })}
+
+          {showIntro && (
+            <div className="map-coach" role="status">
+              <span className="coach-avatar"><HelpCircle /></span>
+              <p>{level.intro[locale]}</p>
+              <button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button>
+            </div>
+          )}
+
+          {!showIntro && roads.length === 0 && !drawing.length && !notice && (
+            <div className="draw-coach" aria-hidden="true"><span className="finger-trail" /><strong>{t(locale, 'drawCoachShort')}</strong></div>
+          )}
+
+          {notice && (
+            <div className={`map-notice notice-${notice}`} role="status">
+              <span>{notice === 'obstacle' ? '🌿' : notice === 'budget' ? '✂️' : '↗'}</span>
+              {notice === 'obstacle' ? t(locale, 'obstacleNotice') : notice === 'budget' ? t(locale, 'budgetNotice') : t(locale, 'gentleTryAgain')}
+            </div>
+          )}
         </div>
       </section>
 
-      {(showIntro || tutorialMessage) && (
-        <div className="coach-bubble" role="status">
-          <span className="coach-avatar"><HelpCircle /></span>
-          <p>{showIntro ? level.intro[locale] : tutorialMessage}</p>
-          {showIntro && <button onClick={() => setShowIntro(false)} aria-label={t(locale, 'close')}><X /></button>}
-        </div>
-      )}
-
-      <section className="board-wrap">
-        <div className={`game-board size-${level.size}`} style={{ '--board-size': level.size } as React.CSSProperties}>
-          {Array.from({ length: level.size * level.size }, (_, index) => {
-            const position = { row: Math.floor(index / level.size), col: index % level.size }
-            const item = itemAt(items, position)
-            const highlighted = highlightCells.some((cell) => cell.row === position.row && cell.col === position.col)
-            return (
-              <button
-                key={`${position.row}-${position.col}`}
-                className={`board-cell ${item ? 'occupied' : ''} ${item?.fixed ? 'fixed' : ''} ${item?.id === selectedId ? 'selected' : ''} ${highlighted ? 'hint-cell' : ''}`}
-                onClick={() => selectCell(position)}
-                aria-label={item ? `${buildingName(locale, item.type)}${item.fixed ? `, ${t(locale, 'fixed')}` : ''}` : t(locale, 'emptyCell')}
-              >
-                <span className="plot-grass" aria-hidden="true" />
-                {item && <BuildingArt type={item.type} decorative />}
-                {item?.fixed && <span className="fixed-mark" aria-hidden="true"><LockKeyhole /></span>}
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      <section className="inventory-panel">
-        <div className="inventory-heading">
-          <span>{t(locale, 'placeThese')}</span>
-          <small>{selected ? t(locale, 'movePrompt') : t(locale, 'selectPrompt')}</small>
-        </div>
-        <div className="inventory-list">
-          {[...inventory, ...placedMovables].map((item) => (
-            <button key={item.id} className={`inventory-item ${item.id === selectedId ? 'selected' : ''} ${item.position ? 'placed' : ''}`} onClick={() => selectItem(item)}>
-              <BuildingArt type={item.type} decorative />
-              <span>{buildingName(locale, item.type)}</span>
-              {item.id === selectedId && <i>{t(locale, 'selected')}</i>}
-              {item.position && item.id !== selectedId && <Check aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
-      </section>
+      <div className={`road-status-row ${!evaluation.withinBudget ? 'over-budget' : ''}`}>
+        <span><Route /> {level.roadBudget ? t(locale, 'roadBudget') : t(locale, 'roadLength')}: <strong>{Math.round(evaluation.totalLength)}{level.roadBudget ? ` / ${level.roadBudget}` : ''} m</strong></span>
+        {roads.length > 0 && <span className="alive-status"><i /> {t(locale, 'neighbourhoodAlive')}</span>}
+      </div>
 
       <nav className="game-toolbar" aria-label={locale === 'tr' ? 'Oyun işlemleri' : 'Game actions'}>
         <button onClick={undo} disabled={!history.length}><Undo2 /><span>{t(locale, 'undo')}</span></button>
@@ -215,7 +335,7 @@ export function GameScreen({ level, locale, settings, initialItems, onSave, onCo
             <div className="sheet-handle" />
             <span className="sheet-icon"><Lightbulb /></span>
             <h2 id="hint-title">{t(locale, 'hintIntro')}</h2>
-            <p>{hintFor(locale, level)}</p>
+            <p>{hintFor(locale, level.id)}</p>
             <button className="primary-button" onClick={() => setHintOpen(false)}>{t(locale, 'resume')}</button>
           </section>
         </div>
@@ -241,8 +361,11 @@ export function GameScreen({ level, locale, settings, initialItems, onSave, onCo
             <p className="eyebrow"><Sparkles /> {level.name[locale]}</p>
             <h2>{level.id === 5 ? t(locale, 'allCompleteTitle') : t(locale, 'completeTitle')}</h2>
             <p>{level.id === 5 ? t(locale, 'allCompleteBody') : t(locale, 'completeBody')}</p>
+            {evaluation.efficient && (
+              <div className="master-route-badge"><Route /><div><strong>{t(locale, 'efficientRoute')}</strong><span>{t(locale, 'efficientBody')}</span></div></div>
+            )}
             <div className="mini-neighbourhood" aria-hidden="true">
-              {items.filter((item) => item.type !== 'road').slice(0, 4).map((item) => <BuildingArt key={item.id} type={item.type} decorative />)}
+              {level.landmarks.slice(0, 4).map((landmark) => <BuildingArt key={landmark.id} type={landmark.type} decorative />)}
             </div>
             {level.id < 5 ? (
               <button className="primary-button" onClick={onNext}>{t(locale, 'nextLevel')} <ArrowLeft className="arrow-next" /></button>

@@ -5,17 +5,10 @@ import { LevelsScreen } from './screens/LevelsScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { levels } from './game/levels'
 import { defaultGame, loadGame, resetGame, saveGame } from './game/storage'
-import type { BoardItem, SavedGame, Settings } from './game/types'
+import type { RoadStroke, SavedGame, Settings } from './game/types'
 import { t } from './i18n'
 
 type Screen = 'home' | 'game' | 'levels' | 'settings'
-
-function freshItems(levelIndex: number) {
-  return levels[levelIndex].items.map((item) => ({
-    ...item,
-    position: item.position ? { ...item.position } : undefined,
-  }))
-}
 
 export function App() {
   const [game, setGame] = useState<SavedGame>(() => loadGame())
@@ -38,15 +31,15 @@ export function App() {
     setScreen('game')
   }
 
-  function savePlacement(items: BoardItem[]) {
+  function saveRoads(roads: RoadStroke[]) {
     setGame((previous) => ({
       ...previous,
       hasStarted: true,
-      placements: { ...previous.placements, [previous.currentLevel]: items },
+      roadNetworks: { ...previous.roadNetworks, [previous.currentLevel]: roads },
     }))
   }
 
-  function completeLevel(items: BoardItem[]) {
+  function completeLevel(roads: RoadStroke[]) {
     setGame((previous) => {
       const levelId = levels[previous.currentLevel].id
       return {
@@ -54,7 +47,7 @@ export function App() {
         completedLevels: previous.completedLevels.includes(levelId)
           ? previous.completedLevels
           : [...previous.completedLevels, levelId],
-        placements: { ...previous.placements, [previous.currentLevel]: items },
+        roadNetworks: { ...previous.roadNetworks, [previous.currentLevel]: roads },
       }
     })
   }
@@ -81,7 +74,7 @@ export function App() {
   }
 
   const level = levels[game.currentLevel] ?? levels[0]
-  const initialItems = game.placements[game.currentLevel] ?? freshItems(game.currentLevel)
+  const initialRoads = game.roadNetworks[game.currentLevel] ?? []
 
   return (
     <div className={classNames}>
@@ -113,8 +106,8 @@ export function App() {
           level={level}
           locale={game.settings.locale}
           settings={game.settings}
-          initialItems={initialItems}
-          onSave={savePlacement}
+          initialRoads={initialRoads}
+          onSave={saveRoads}
           onComplete={completeLevel}
           onNext={nextLevel}
           onHome={() => setScreen('home')}

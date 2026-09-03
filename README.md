@@ -1,6 +1,6 @@
 # Mahalle Ustası
 
-Mahalle Ustası, oyuncunun mahalle yapılarını komşuluk ihtiyaçlarına göre yerleştirdiği; sakin, neşeli ve yetişkinlere yönelik bir mobil düşünme oyunudur.
+Mahalle Ustası, oyuncunun parmağıyla organik sokaklar çizip mahalledeki yapıları birbirine bağladığı; sakin, neşeli ve yetişkinlere yönelik bir mobil düşünme oyunudur.
 
 Oyunun ana dili Türkçedir. Ayarlardan İngilizceye geçilebilir.
 
@@ -10,7 +10,10 @@ Oyunun ana dili Türkçedir. Ayarlardan İngilizceye geçilebilir.
 - Süre, can ve başarısızlık baskısı yok
 - Sınırsız geri alma
 - Her hamlede otomatik kayıt
-- Dokun–seç, dokun–yerleştir kontrolü
+- El titremelerini yumuşatan, geniş toleranslı parmak çizimi
+- Binalara ve mevcut sokaklara manyetik bağlanma
+- Izgara yerine organik arazi ve gerçek bir yol ağı
+- 2. bölümden itibaren ortak yol ve yol bütçesi kararları
 - 60+ kullanıcılar için büyük kontroller ve güçlü okunabilirlik
 - Çevrimdışı çalışma
 - Oyun tahtasında reklam yok
@@ -47,8 +50,8 @@ APK çıktısı `android/app/build/outputs/apk/debug/app-debug.apk` altında olu
 - React + TypeScript + Vite
 - Capacitor Android
 - Vitest + Testing Library
-- Veri tabanlı bölüm ve kural motoru
+- Veri tabanlı bölüm ve yol-ağı graf motoru
 
 ## Durum
 
-MVP-1 beş oynanabilir bölüm, Türkçe/İngilizce arayüz, öğretici, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.
+MVP-2 beş organik yol çizme bölümü, otomatik kavşaklar, korunan doğal alanlar, yol bütçeleri, Türkçe/İngilizce arayüz, yerel kayıt, erişilebilirlik ayarları ve Android paketleme altyapısını içerir.

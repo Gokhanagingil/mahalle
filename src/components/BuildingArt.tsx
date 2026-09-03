@@ -1,7 +1,9 @@
-import type { BuildingType } from '../game/types'
+import type { LandmarkType } from '../game/types'
+
+type ArtworkType = LandmarkType | 'road' | 'pharmacy' | 'square'
 
 type Props = {
-  type: BuildingType
+  type: ArtworkType
   decorative?: boolean
 }
 
@@ -102,6 +104,19 @@ export function BuildingArt({ type, decorative = false }: Props) {
         <path className="shelter" d="M20 38h43v8H20z" />
         <path className="glass" d="M24 46h35v26H24z" />
         <path className="bench" d="M29 62h26v6H29zm2 6h4v10h-4zm18 0h4v10h-4z" />
+      </svg>
+    )
+  }
+
+  if (type === 'entrance') {
+    return (
+      <svg {...common} className="building-art building-entrance">
+        <path className="ground" d="M8 78h80l-9 9H17z" />
+        <path className="post" d="M19 29h9v52h-9zm49 0h9v52h-9z" />
+        <path className="arch" d="M18 27c12-18 47-18 60 0v14h-9V30c-10-12-32-12-42 0v11h-9z" />
+        <path className="sign" d="M27 31h42v19H27z" />
+        <path className="sign-mark" d="M35 38h26v5H35z" />
+        <path className="flower" d="M10 68c8-9 15-4 20 5-7 3-14 4-20-5zm76 0c-8-9-15-4-20 5 7 3 14 4 20-5z" />
       </svg>
     )
   }

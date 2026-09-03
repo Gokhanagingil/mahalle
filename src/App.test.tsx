@@ -32,8 +32,16 @@ describe('Mahalle Ustası shell', () => {
   it('completes the first level through the touch-first flow', async () => {
     render(<App />)
     fireEvent.click(screen.getByRole('button', { name: /Başla/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Fırın' }))
-    fireEvent.click(screen.getAllByRole('button', { name: 'Boş alan' })[1])
+    const map = screen.getByRole('application')
+    Object.defineProperty(map, 'getBoundingClientRect', {
+      value: () => ({ left: 0, top: 0, right: 100, bottom: 118, width: 100, height: 118, x: 0, y: 0, toJSON: () => ({}) }),
+    })
+    Object.defineProperty(map, 'setPointerCapture', { value: () => undefined })
+    Object.defineProperty(map, 'hasPointerCapture', { value: () => true })
+    Object.defineProperty(map, 'releasePointerCapture', { value: () => undefined })
+    fireEvent.pointerDown(map, { pointerId: 1, clientX: 24, clientY: 28 })
+    fireEvent.pointerMove(map, { pointerId: 1, clientX: 49, clientY: 57 })
+    fireEvent.pointerUp(map, { pointerId: 1, clientX: 76, clientY: 88 })
     expect(await screen.findByRole('heading', { name: 'Mahalle canlandı!' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sonraki Bölüm/ })).toBeInTheDocument()
   })

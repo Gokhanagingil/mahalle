@@ -1,60 +1,58 @@
 export type Locale = 'tr' | 'en'
 
-export type BuildingType =
-  | 'home'
-  | 'bakery'
-  | 'park'
-  | 'road'
-  | 'pharmacy'
-  | 'clinic'
-  | 'busStop'
-  | 'square'
+export type Point = { x: number; y: number }
 
-export type Position = { row: number; col: number }
-
-export type BoardItem = {
-  id: string
-  type: BuildingType
-  position?: Position
-  fixed?: boolean
-}
-
-export type Rule =
-  | {
-      id: string
-      kind: 'adjacent'
-      subject: BuildingType
-      target: BuildingType
-    }
-  | {
-      id: string
-      kind: 'notAdjacent'
-      subject: BuildingType
-      target: BuildingType
-    }
-  | {
-      id: string
-      kind: 'coverage'
-      subject: BuildingType
-      target: BuildingType
-      count: number
-    }
+export type LandmarkType = 'home' | 'bakery' | 'clinic' | 'busStop' | 'entrance' | 'park'
+export type ObstacleType = 'tree' | 'pond' | 'garden'
 
 export type LocalizedText = { tr: string; en: string }
 
-export type Level = {
+export type Landmark = {
+  id: string
+  type: LandmarkType
+  position: Point
+  label: LocalizedText
+}
+
+export type Obstacle = {
+  id: string
+  type: ObstacleType
+  position: Point
+  radius: number
+  label: LocalizedText
+}
+
+export type RoadStroke = {
+  id: string
+  points: Point[]
+}
+
+export type ConnectionGoal =
+  | { kind: 'connectAll'; landmarkIds: string[] }
+  | { kind: 'coverage'; sourceId: string; targetIds: string[]; count: number }
+
+export type RoadLevel = {
   id: number
   name: LocalizedText
   intro: LocalizedText
-  size: number
-  items: BoardItem[]
-  rules: Rule[]
-  tutorial?: 'firstPlacement' | 'distance'
+  objective: LocalizedText
+  landmarks: Landmark[]
+  obstacles: Obstacle[]
+  goal: ConnectionGoal
+  roadBudget?: number
+  efficientLength: number
+  tutorialPath?: Point[]
 }
 
-export type RuleResult = {
-  ruleId: string
-  satisfied: boolean
+export type RoadEvaluation = {
+  complete: boolean
+  networkComplete: boolean
+  withinBudget: boolean
+  connectedLandmarkIds: string[]
+  connectedCount: number
+  requiredCount: number
+  totalLength: number
+  efficient: boolean
 }
 
 export type Settings = {
@@ -70,6 +68,6 @@ export type SavedGame = {
   hasStarted: boolean
   currentLevel: number
   completedLevels: number[]
-  placements: Record<number, BoardItem[]>
+  roadNetworks: Record<number, RoadStroke[]>
   settings: Settings
 }

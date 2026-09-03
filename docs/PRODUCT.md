@@ -4,7 +4,7 @@ Bu oyun Belgin/Kuş Bahçesi'nden bağımsızdır. Ayrı kod tabanı, ayrı kay�
 
 ## Ürün vaadi
 
-Sakin, yetişkinlere yakışan ve her bölümde oyuncunun kendi çözümünü ürettiği bir mahalle planlama oyunu.
+Sakin, yetişkinlere yakışan ve her bölümde oyuncunun parmağıyla kendi sokak ağını ürettiği bir mahalle planlama oyunu. Parmağın çizdiği ham iz bir niyet olarak yorumlanır; oyun izi yumuşatır, binalara ve mevcut yollara mıknatıslar, kesişen sokakları otomatik olarak kavşağa dönüştürür.
 
 ## Dil
 
@@ -13,13 +13,15 @@ Sakin, yetişkinlere yakışan ve her bölümde oyuncunun kendi çözümünü ü
 - Kullanıcı dili ayarlardan anında değiştirilebilir.
 - Kullanıcıya gösterilen metinler bileşenlerin içine gömülmez; merkezi sözlükte tutulur.
 
-## MVP-1
+## MVP-2
 
-1. Sıcak Ekmek — yakınlık
-2. Sessiz Park — uzaklık
-3. Sağlık Köşesi — yakınlık transferi
-4. İlk Durak — kapsama
-5. Küçük Mahalle — iki koşulu birlikte planlama
+1. Sıcak Ekmek Yolu — tek parmak hareketiyle bağlantı öğretimi
+2. İki Kapı, Bir Sokak — ortak yol ve dallanma
+3. Sağlık Yolu — ağaç ve gölet çevresinde rota planlama
+4. Durağa Giden Yollar — üç hedefli, kavşaklı ağ kurma
+5. Mahallenin Kalbi — beş nokta, iki korunan alan ve yol bütçesi
+
+İlk bölüm kontrolü öğretir. İkinci bölümden itibaren bağlantı kurmak tek başına yeterli değildir; yol bütçesi oyuncuyu ortak sokaklar, dallar ve kısa güzergâhlar düşünmeye yöneltir. Kontrol kolay, kararlar giderek derindir.
 
 ## Sağlık iletişimi sınırı
 
